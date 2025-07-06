@@ -1,4 +1,4 @@
-import { RABBITMQ_CONFIG } from '@/lib/config'
+import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from '@/lib/config'
 import { createApiResponse, createApiErrorResponse, NO_CACHE_HEADERS, NO_CACHE_FETCH_OPTIONS } from '@/lib/api-utils'
 
 export const dynamic = 'force-dynamic'
@@ -9,13 +9,11 @@ export async function POST(
   { params }: { params: { vhost: string; queue: string } }
 ) {
   try {
-    const { host, port, username, password } = RABBITMQ_CONFIG
     const { vhost, queue } = params
-    const baseUrl = `http://${host}:${port}/api`
-    const url = `${baseUrl}/queues/${encodeURIComponent(vhost)}/${encodeURIComponent(queue)}/get`
+    const url = `${getRabbitMQBaseUrl()}/api/queues/${encodeURIComponent(vhost)}/${encodeURIComponent(queue)}/get`
 
     console.log(`[API Route] Fetching messages from queue ${queue} in vhost ${vhost}`)
-    console.log(`[API Route] Using host: ${host}:${port}`)
+    console.log(`[API Route] Using host: ${getRabbitMQBaseUrl()}`)
 
     // Get the original request body or use defaults that won't affect processing
     const body = await request.json().catch(() => ({
@@ -24,13 +22,10 @@ export async function POST(
       encoding: "auto"
     }))
 
-    const authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
-
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
+        ...getRabbitMQAuthHeaders(),
         ...NO_CACHE_HEADERS
       },
       ...NO_CACHE_FETCH_OPTIONS,

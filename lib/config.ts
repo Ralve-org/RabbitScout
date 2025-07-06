@@ -1,6 +1,7 @@
 import { useAuth } from './auth'
 
 export const RABBITMQ_CONFIG = {
+  protocol: process.env.NEXT_PUBLIC_RABBITMQ_PROTOCOL || 'http',
   host: process.env.NEXT_PUBLIC_RABBITMQ_HOST,
   port: process.env.NEXT_PUBLIC_RABBITMQ_PORT,
   vhost: process.env.NEXT_PUBLIC_RABBITMQ_VHOST ,
@@ -16,6 +17,7 @@ export const getRabbitMQConfig = () => {
   const auth = useAuth.getState()
   
   return {
+    protocol: RABBITMQ_CONFIG.protocol,
     host: RABBITMQ_CONFIG.host,
     port: RABBITMQ_CONFIG.port,
     vhost: RABBITMQ_CONFIG.vhost,
@@ -26,7 +28,8 @@ export const getRabbitMQConfig = () => {
 
 // Helper to get base URL
 export const getRabbitMQBaseUrl = () => {
-  return `http://${RABBITMQ_CONFIG.host}:${RABBITMQ_CONFIG.port}`
+  const portPart = RABBITMQ_CONFIG.port ? `:${RABBITMQ_CONFIG.port}` : '';
+  return `${RABBITMQ_CONFIG.protocol}://${RABBITMQ_CONFIG.host}${portPart}`
 }
 
 // Helper to get auth headers using current auth state

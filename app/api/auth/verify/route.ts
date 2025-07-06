@@ -1,13 +1,14 @@
+import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from "@/lib/config"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   try {
-    const { username, password } = await request.json()
+    const { username } = await request.json()
     
     // Note: RabbitMQ management API runs on port 15672
     const managementPort = process.env.NEXT_PUBLIC_RABBITMQ_PORT
     const host = process.env.NEXT_PUBLIC_RABBITMQ_HOST
-    const url = `http://${host}:${managementPort}/api/whoami`
+    const url = `${getRabbitMQBaseUrl()}/api/whoami`
     
     console.log('Authentication attempt:', {
       host,
@@ -19,10 +20,7 @@ export async function POST(request: Request) {
     try {
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64'),
-          'Accept': 'application/json',
-        },
+        headers: getRabbitMQAuthHeaders(),
         next: { revalidate: 60 } // Cache for 60 seconds
       })
 
