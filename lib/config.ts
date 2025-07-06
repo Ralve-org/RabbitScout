@@ -28,7 +28,10 @@ export const getRabbitMQConfig = () => {
 
 // Helper to get base URL
 export const getRabbitMQBaseUrl = () => {
-  const portPart = RABBITMQ_CONFIG.port ? `:${RABBITMQ_CONFIG.port}` : '';
+  let portPart = "";
+  if(RABBITMQ_CONFIG.port && RABBITMQ_CONFIG.port !== "" && RABBITMQ_CONFIG.port !== "undefined") {
+    portPart = `:${RABBITMQ_CONFIG.port}`;
+  }
   return `${RABBITMQ_CONFIG.protocol}://${RABBITMQ_CONFIG.host}${portPart}`
 }
 
