@@ -21,8 +21,7 @@ export async function GET() {
       })
     }
 
-    const baseUrl = getRabbitMQBaseUrl()
-    const url = `${baseUrl}/api/overview`
+    const url = `${getRabbitMQBaseUrl()}/api/overview`
 
     console.log(`[API Route] Fetching fresh overview data from ${url}`)
 

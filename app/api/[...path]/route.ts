@@ -1,26 +1,18 @@
-import { RABBITMQ_CONFIG, API_TIMEOUT_MS } from '../../../lib/config'
+import { getRabbitMQBaseUrl, getRabbitMQAuthHeaders, API_TIMEOUT_MS } from '../../../lib/config'
 import { NextResponse } from 'next/server'
-import { headers } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(request: Request, { params }: { params: { path: string[] } }) {
   try {
-    const { host, port, username, password } = RABBITMQ_CONFIG
-    const baseUrl = `http://${host}:${port}/api`
     const path = params.path.join('/')
-    const url = `${baseUrl}/${path}`
+    const url = `${getRabbitMQBaseUrl()}/api/${path}`
 
     console.log(`[API Route] Fetching from ${url}`)
 
-    const authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
-
     const response = await fetch(url, {
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-      },
+      headers: getRabbitMQAuthHeaders(),
       cache: 'no-store',
       signal: AbortSignal.timeout(API_TIMEOUT_MS),
     })
@@ -48,22 +40,15 @@ export async function GET(request: Request, { params }: { params: { path: string
 
 export async function POST(request: Request, { params }: { params: { path: string[] } }) {
   try {
-    const { host, port, username, password } = RABBITMQ_CONFIG
-    const baseUrl = `http://${host}:${port}/api`
     const path = params.path.join('/')
-    const url = `${baseUrl}/${path}`
+    const url = `${getRabbitMQBaseUrl()}/api/${path}`
+    const body = await request.json()
 
     console.log(`[API Route] POSTing to ${url}`)
 
-    const authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
-    const body = await request.json()
-
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-      },
+      headers: getRabbitMQAuthHeaders(),
       body: JSON.stringify(body),
       cache: 'no-store',
       signal: AbortSignal.timeout(API_TIMEOUT_MS),

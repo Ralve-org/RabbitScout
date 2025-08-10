@@ -1,4 +1,4 @@
-import { RABBITMQ_CONFIG } from '../../../lib/config'
+import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from '../../../lib/config'
 import { createApiResponse, createApiErrorResponse, NO_CACHE_HEADERS, NO_CACHE_FETCH_OPTIONS } from '@/lib/api-utils'
 
 export const dynamic = 'force-dynamic'
@@ -6,19 +6,14 @@ export const revalidate = 0
 
 export async function GET() {
   try {
-    const { host, port, username, password } = RABBITMQ_CONFIG
-    const baseUrl = `http://${host}:${port}/api`
-    const url = `${baseUrl}/channels`
+    const url = `${getRabbitMQBaseUrl()}/api/channels`
 
     console.log(`[API Route] Fetching channels from ${url}`)
-    console.log(`[API Route] Using host: ${host}:${port}`)
-
-    const authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+    console.log(`[API Route] Using host: ${getRabbitMQBaseUrl()}`)
 
     const response = await fetch(url, {
       headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
+        ...getRabbitMQAuthHeaders(),
         ...NO_CACHE_HEADERS
       },
       ...NO_CACHE_FETCH_OPTIONS,
