@@ -11,8 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatBytes, formatRate, QueueStats, API_ENDPOINTS, RabbitMQError, RABBITMQ_CONFIG, rabbitMQFetch } from "@/lib/utils"
-import { cn } from "@/lib/utils"
+import { formatRate, QueueStats, RabbitMQError, cn} from "@/lib/utils"
 import { ArrowUpDown } from "lucide-react"
 import { useRealtimeUpdates } from "@/hooks/use-realtime-updates"
 import { useToast } from "@/hooks/use-toast"
@@ -38,7 +37,7 @@ interface QueueListProps {
 type SortField = keyof Queue
 type SortOrder = "asc" | "desc"
 
-export function QueueList({ queues: initialQueues }: QueueListProps) {
+export function QueueList({ queues: initialQueues }: Readonly<QueueListProps>) {
   const [isInitialLoading, setIsInitialLoading] = useState(!initialQueues)
   const [queues, setQueues] = useState<Queue[]>(initialQueues || [])
   const [error, setError] = useState<RabbitMQError | null>(null)
@@ -130,7 +129,7 @@ export function QueueList({ queues: initialQueues }: QueueListProps) {
         clearInterval(intervalId)
       }
     }
-  }, [initialQueues, interval])
+  }, [fetchQueues, initialQueues, interval])
 
   const realtimeQueues = useRealtimeUpdates('queue', queues, (current, update) => {
     return current.map(queue => 
@@ -159,13 +158,10 @@ export function QueueList({ queues: initialQueues }: QueueListProps) {
   }, [sortField, sortOrder])
 
   // Apply the memoized sort function to the queues
-  const sortedQueues = useMemo(() => {
+  const displayQueues = useMemo(() => {
     const queueList = realtimeQueues.length > 0 ? realtimeQueues : queues;
     return sortQueuesFn(queueList);
   }, [queues, realtimeQueues, sortQueuesFn]);
-
-  // Display the sorted queues directly
-  const displayQueues = sortedQueues;
 
   const sortQueues = (field: SortField) => {
     if (sortField === field) {

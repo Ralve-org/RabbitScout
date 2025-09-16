@@ -1,4 +1,4 @@
-import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from '../../../lib/config'
+import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from '@/lib/config'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -6,6 +6,7 @@ export const revalidate = 0
 
 // Cache the queues data for 2 seconds to prevent duplicate calls
 const CACHE_DURATION = 2000 // 2 seconds
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cachedData: any = null
 let lastFetchTime = 0
 
@@ -50,10 +51,11 @@ export async function GET() {
         'Cache-Control': `public, max-age=${CACHE_DURATION / 1000}`,
       }
     })
-  } catch (error) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error('[API Route] Error fetching queues:', error)
     return NextResponse.json(
-      { error: error.message },
+      { error: error?.message },
       { status: 500 }
     )
   }

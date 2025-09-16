@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {MessageOperations} from "@/components/queues/message-operations";
 
 interface Message {
   payload: string
@@ -47,7 +48,7 @@ interface Message {
   routing_key: string
   message_count: number
   properties: {
-    headers: Record<string, any>
+    headers: Record<string, never>
     delivery_mode: number
     timestamp?: string
     content_type?: string
@@ -67,12 +68,12 @@ interface MessageViewerProps {
   messages: Message[]
   open: boolean
   onOpenChange: (open: boolean) => void
-  queueInfo?: { messages_ready: number; messages_unacknowledged: number }
+  queueInfo: { messages_ready: number; messages_unacknowledged: number, queue: string, vhost: string }
 }
 
 type SortableField = "routing_key" | "payload_bytes" | "redelivered"
 
-export function MessageViewer({ messages, open, onOpenChange, queueInfo }: MessageViewerProps) {
+export function MessageViewer({ messages, open, onOpenChange, queueInfo }: Readonly<MessageViewerProps>) {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [sortField, setSortField] = useState<SortableField>("routing_key")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
@@ -140,7 +141,7 @@ export function MessageViewer({ messages, open, onOpenChange, queueInfo }: Messa
   const getQueueStatusDescription = () => {
     if (!queueInfo) return null;
     
-    const { messages_ready, messages_unacknowledged } = queueInfo;
+    const { messages_unacknowledged } = queueInfo;
     const hasViewableMessages = messages.length > 0;
     const hasUnackedMessages = messages_unacknowledged > 0;
     
@@ -219,6 +220,9 @@ export function MessageViewer({ messages, open, onOpenChange, queueInfo }: Messa
                       <ArrowUpDown className={sortField === "redelivered" ? "opacity-100" : "opacity-0"} />
                     </Button>
                   </TableHead>
+                    <TableHead className="w-[30%]">
+                        actions
+                    </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -246,6 +250,9 @@ export function MessageViewer({ messages, open, onOpenChange, queueInfo }: Messa
                           <span className="text-green-600">No</span>
                         )}
                       </TableCell>
+                        <TableCell className="text-center">
+                            <MessageOperations message={{...message, vhost: queueInfo.vhost, queue: queueInfo.queue}}></MessageOperations>
+                        </TableCell>
                     </TableRow>
                   ))
                 ) : (

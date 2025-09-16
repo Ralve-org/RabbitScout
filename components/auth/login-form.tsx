@@ -48,7 +48,7 @@ export function LoginForm() {
 
       if (data.authenticated && data.user) {
         // Store auth data in Zustand store
-        await login(data)
+        login(data)
         router.push("/")
         toast({
           title: "Welcome back!",

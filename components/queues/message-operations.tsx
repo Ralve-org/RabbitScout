@@ -1,7 +1,6 @@
 "use client"
 
 import {useState} from "react"
-import {MessageViewer} from "@/components/queues/message-viewer"
 import {Button} from "@/components/ui/button"
 import {
     Dialog,
@@ -18,47 +17,54 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {getMessages, purgeQueue} from "@/lib/utils"
+import {getMessages} from "@/lib/utils"
 import {MoreHorizontal, Trash} from "lucide-react"
-import {useRouter} from "next/navigation"
 
-interface QueueOperationsProps {
-    queue: {
-        name: string
+interface MessageOperationsProps {
+
+    message: {
         vhost: string
-        messages_ready: number
-        messages_unacknowledged: number
+        queue: string
+
+        payload: string
+        payload_bytes: number
+        redelivered: boolean
+        exchange: string
+        routing_key: string
+        message_count: number
+        properties: {
+            headers: Record<string, never>
+            delivery_mode: number
+            timestamp?: string
+            content_type?: string
+            content_encoding?: string
+            correlation_id?: string
+            reply_to?: string
+            expiration?: string
+            message_id?: string
+            type?: string
+            user_id?: string
+            app_id?: string
+            cluster_id?: string
+        }
     }
 }
 
-export function QueueOperations({queue}: Readonly<QueueOperationsProps>) {
-    const router = useRouter()
-    const [purgeDialogOpen, setPurgeDialogOpen] = useState(false)
-    const [messageViewerOpen, setMessageViewerOpen] = useState(false)
+export function MessageOperations({message}: MessageOperationsProps) {
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [messages, setMessages] = useState<[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
-    const onPurge = async () => {
-        try {
-            setIsLoading(true)
-            await purgeQueue(queue.vhost, queue.name)
-            router.refresh()
-        } catch (error) {
-            console.error("Failed to purge queue:", error)
-        } finally {
-            setIsLoading(false)
-            setPurgeDialogOpen(false)
-        }
-    }
 
-    const onViewMessages = async () => {
+    const onDelete = async () => {
         try {
             setIsLoading(true)
-            const fetchedMessages = await getMessages(queue.vhost, queue.name, 50, 'ack_requeue_true')
+            // todo delete message
+            const fetchedMessages = await getMessages(message.vhost, message.queue, 50, 'ack_requeue_true')
             setMessages(fetchedMessages)
-            setMessageViewerOpen(true)
+            setDeleteDialogOpen(false)
         } catch (error) {
-            console.error("Failed to fetch messages:", error)
+            console.error("Failed to delete message:", error)
         } finally {
             setIsLoading(false)
         }
@@ -74,55 +80,40 @@ export function QueueOperations({queue}: Readonly<QueueOperationsProps>) {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={onViewMessages}>
-                        View Messages
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator/>
                     <DropdownMenuItem
                         className="text-red-600"
-                        onClick={() => setPurgeDialogOpen(true)}
+                        onClick={() => setDeleteDialogOpen(true)}
                     >
                         <Trash className="mr-2 h-4 w-4"/>
-                        Purge Queue
+                        Delete Message
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <Dialog open={purgeDialogOpen} onOpenChange={setPurgeDialogOpen}>
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Are you sure?</DialogTitle>
                         <DialogDescription>
-                            This will remove all messages from the queue &#34;{queue.name}&#34;. This
+                            This will delete this message from the queue &#34;{message.payload}&#34;. This
                             action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setPurgeDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
-                            onClick={onPurge}
+                            onClick={onDelete}
                             disabled={isLoading}
                         >
-                            {isLoading ? "Purging..." : "Purge Queue"}
+                            {isLoading ? "Deleting..." : "Delete Message"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
-            <MessageViewer
-                messages={messages}
-                open={messageViewerOpen}
-                onOpenChange={setMessageViewerOpen}
-                queueInfo={{
-                    messages_ready: queue.messages_ready,
-                    messages_unacknowledged: queue.messages_unacknowledged,
-                    queue: queue.name,
-                    vhost: queue.vhost
-                }}
-            />
         </>
     )
 }

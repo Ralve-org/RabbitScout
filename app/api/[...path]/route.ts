@@ -1,12 +1,14 @@
-import { getRabbitMQBaseUrl, getRabbitMQAuthHeaders, API_TIMEOUT_MS } from '../../../lib/config'
+import { getRabbitMQBaseUrl, getRabbitMQAuthHeaders, API_TIMEOUT_MS } from '@/lib/config'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export async function GET(request: Request, { params }: { params: { path: string[] } }) {
+type Props = { params: Promise<{ path: string[] }>}
+
+export async function GET(request: Request, { params }: Props) {
   try {
-    const path = params.path.join('/')
+    const path = (await params).path.join('/')
     const url = `${getRabbitMQBaseUrl()}/api/${path}`
 
     console.log(`[API Route] Fetching from ${url}`)
