@@ -31,13 +31,13 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^20",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "eslint": "^8",
     "eslint-config-next": "14.2.16",
     "postcss": "^8",
-    "@tailwindcss/postcss": "^4.1.13",
     "tailwindcss": "^4.1.13",
     "typescript": "^5"
   }
