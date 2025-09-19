@@ -4,6 +4,7 @@ export const RABBITMQ_CONFIG = {
   protocol: process.env.NEXT_PUBLIC_RABBITMQ_PROTOCOL || 'http',
   host: process.env.NEXT_PUBLIC_RABBITMQ_HOST,
   port: process.env.NEXT_PUBLIC_RABBITMQ_PORT,
+  listenerPort: process.env.NEXT_PUBLIC_RABBITMQ_LISTENER_PORT,
   vhost: process.env.NEXT_PUBLIC_RABBITMQ_VHOST ,
   username: process.env.RABBITMQ_USERNAME,
   password: process.env.RABBITMQ_PASSWORD,

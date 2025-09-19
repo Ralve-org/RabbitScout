@@ -1,27 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { API_ENDPOINTS, formatRate, RabbitMQError } from "@/lib/utils"
-import { useToast } from "@/hooks/use-toast"
-import { ChannelListSkeleton } from "./channel-list-skeleton"
-import { MoreHorizontal, ArrowUpDown, XCircle } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ApiError } from "@/components/common/api-error"
-import { useRealtimeUpdates } from "@/hooks/use-realtime-updates"
+import {useEffect, useState} from "react"
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table"
+import {Button} from "@/components/ui/button"
+import {API_ENDPOINTS, RabbitMQError} from "@/lib/utils"
+import {useToast} from "@/hooks/use-toast"
+import {ChannelListSkeleton} from "./channel-list-skeleton"
+import {ArrowUpDown, MoreHorizontal, XCircle} from "lucide-react"
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,} from "@/components/ui/dropdown-menu"
+import {ApiError} from "@/components/common/api-error"
 
 interface MessageStats {
   publish?: number
@@ -93,7 +80,7 @@ export function ChannelList() {
   const [error, setError] = useState<RabbitMQError | null>(null)
   const [sortField, setSortField] = useState<SortField>("name")
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
-  const { toast } = useToast()
+  const {toast} = useToast()
 
   const fetchChannels = async () => {
     try {
@@ -126,12 +113,6 @@ export function ChannelList() {
     fetchChannels()
   }, [])
 
-  const realtimeChannels = useRealtimeUpdates('channel', channels, (current, update) => {
-    return current.map(channel => 
-      channel.name === update.name ? { ...channel, ...update } : channel
-    )
-  })
-
   const sortChannels = (field: SortField) => {
     if (field === sortField) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc")
@@ -142,7 +123,7 @@ export function ChannelList() {
   }
 
   const getSortedChannels = () => {
-    const sorted = [...realtimeChannels].sort((a, b) => {
+    const sorted = [...channels].sort((a, b) => {
       const multiplier = sortOrder === "asc" ? 1 : -1
       switch (sortField) {
         case "name":
@@ -171,7 +152,7 @@ export function ChannelList() {
   }
 
   if (isLoading && !error) {
-    return <ChannelListSkeleton />
+    return <ChannelListSkeleton/>
   }
 
   if (error) {
@@ -179,127 +160,127 @@ export function ChannelList() {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[30%]">
-              <Button
-                variant="ghost"
-                onClick={() => sortChannels("name")}
-                className="w-full flex items-center justify-center gap-1"
-              >
-                Channel
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-            <TableHead className="w-[15%]">
-              <Button
-                variant="ghost"
-                onClick={() => sortChannels("user")}
-                className="w-full flex items-center justify-center gap-1"
-              >
-                User
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-            <TableHead className="w-[15%]">
-              <Button
-                variant="ghost"
-                onClick={() => sortChannels("state")}
-                className="w-full flex items-center justify-center gap-1"
-              >
-                State
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-            <TableHead className="w-[10%]">
-              <Button
-                variant="ghost"
-                onClick={() => sortChannels("prefetch")}
-                className="w-full flex items-center justify-center gap-1"
-              >
-                Prefetch
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-            <TableHead className="w-[10%]">
-              <Button
-                variant="ghost"
-                onClick={() => sortChannels("messages")}
-                className="w-full flex items-center justify-center gap-1"
-              >
-                Unacked
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-            <TableHead className="w-[10%]">
-              <Button
-                variant="ghost"
-                onClick={() => sortChannels("consumers")}
-                className="w-full flex items-center justify-center gap-1"
-              >
-                Consumers
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-            <TableHead className="w-[10%]">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {getSortedChannels().map((channel) => (
-            <TableRow key={channel.name}>
-              <TableCell className="w-[30%]">
-                <div className="font-medium">#{channel.number}</div>
-                <div className="text-sm text-muted-foreground">
-                  {channel.connection_details.name}
-                </div>
-              </TableCell>
-              <TableCell className="w-[15%]">
-                <div>{channel.user}</div>
-                <div className="text-sm text-muted-foreground">
-                  {channel.vhost}
-                </div>
-              </TableCell>
-              <TableCell className="w-[15%]">
-                <div className="flex items-center justify-center">
-                  {channel.state}
-                </div>
-              </TableCell>
-              <TableCell className="w-[10%]">
-                <div className="text-center">{channel.prefetch_count}</div>
-              </TableCell>
-              <TableCell className="w-[10%]">
-                <div className="text-center">{channel.messages_unacknowledged}</div>
-              </TableCell>
-              <TableCell className="w-[10%]">
-                <div className="text-center">{channel.consumer_count}</div>
-              </TableCell>
-              <TableCell className="w-[10%]">
-                <div className="flex justify-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center">
-                      <DropdownMenuItem
-                        className="text-destructive cursor-not-allowed opacity-50"
-                        disabled
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Close Channel
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </TableCell>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[30%]">
+                <Button
+                    variant="ghost"
+                    onClick={() => sortChannels("name")}
+                    className="w-full flex items-center justify-center gap-1"
+                >
+                  Channel
+                  <ArrowUpDown className="ml-2 h-4 w-4"/>
+                </Button>
+              </TableHead>
+              <TableHead className="w-[15%]">
+                <Button
+                    variant="ghost"
+                    onClick={() => sortChannels("user")}
+                    className="w-full flex items-center justify-center gap-1"
+                >
+                  User
+                  <ArrowUpDown className="ml-2 h-4 w-4"/>
+                </Button>
+              </TableHead>
+              <TableHead className="w-[15%]">
+                <Button
+                    variant="ghost"
+                    onClick={() => sortChannels("state")}
+                    className="w-full flex items-center justify-center gap-1"
+                >
+                  State
+                  <ArrowUpDown className="ml-2 h-4 w-4"/>
+                </Button>
+              </TableHead>
+              <TableHead className="w-[10%]">
+                <Button
+                    variant="ghost"
+                    onClick={() => sortChannels("prefetch")}
+                    className="w-full flex items-center justify-center gap-1"
+                >
+                  Prefetch
+                  <ArrowUpDown className="ml-2 h-4 w-4"/>
+                </Button>
+              </TableHead>
+              <TableHead className="w-[10%]">
+                <Button
+                    variant="ghost"
+                    onClick={() => sortChannels("messages")}
+                    className="w-full flex items-center justify-center gap-1"
+                >
+                  Unacked
+                  <ArrowUpDown className="ml-2 h-4 w-4"/>
+                </Button>
+              </TableHead>
+              <TableHead className="w-[10%]">
+                <Button
+                    variant="ghost"
+                    onClick={() => sortChannels("consumers")}
+                    className="w-full flex items-center justify-center gap-1"
+                >
+                  Consumers
+                  <ArrowUpDown className="ml-2 h-4 w-4"/>
+                </Button>
+              </TableHead>
+              <TableHead className="w-[10%]">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {getSortedChannels().map((channel) => (
+                <TableRow key={channel.name}>
+                  <TableCell className="w-[30%]">
+                    <div className="font-medium">#{channel.number}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {channel.connection_details.name}
+                    </div>
+                  </TableCell>
+                  <TableCell className="w-[15%]">
+                    <div>{channel.user}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {channel.vhost}
+                    </div>
+                  </TableCell>
+                  <TableCell className="w-[15%]">
+                    <div className="flex items-center justify-center">
+                      {channel.state}
+                    </div>
+                  </TableCell>
+                  <TableCell className="w-[10%]">
+                    <div className="text-center">{channel.prefetch_count}</div>
+                  </TableCell>
+                  <TableCell className="w-[10%]">
+                    <div className="text-center">{channel.messages_unacknowledged}</div>
+                  </TableCell>
+                  <TableCell className="w-[10%]">
+                    <div className="text-center">{channel.consumer_count}</div>
+                  </TableCell>
+                  <TableCell className="w-[10%]">
+                    <div className="flex justify-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4"/>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center">
+                          <DropdownMenuItem
+                              className="text-destructive cursor-not-allowed opacity-50"
+                              disabled
+                          >
+                            <XCircle className="mr-2 h-4 w-4"/>
+                            Close Channel
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
   )
 }

@@ -10,6 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 export const RABBITMQ_CONFIG = {
     host: process.env.NEXT_PUBLIC_RABBITMQ_HOST || 'localhost',
     port: process.env.NEXT_PUBLIC_RABBITMQ_PORT || '15672',
+    listenerPort: process.env.NEXT_PUBLIC_RABBITMQ_LISTENER_PORT || '5672',
     vhost: process.env.NEXT_PUBLIC_RABBITMQ_VHOST || '/',
     username: process.env.NEXT_PUBLIC_RABBITMQ_USERNAME,
     password: process.env.NEXT_PUBLIC_RABBITMQ_PASSWORD,
@@ -310,60 +311,26 @@ export async function getQueues() {
     });
 }
 
-export async function getExchanges() {
-    const data = await rabbitMQFetch('exchanges', {
-        cache: 'no-store',
-        next: {revalidate: 0},
-        headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        }
-    });
-    return data;
+export async function getExchange(vhost: string, exchangeName: string) {
+  const encodedVhost = encodeURIComponent(vhost);
+  const encodedExchange = encodeURIComponent(exchangeName);
+  return rabbitMQFetch(`/exchanges/${encodedVhost}/${encodedExchange}/bindings/source`, {
+    cache: 'no-store',
+    next: {revalidate: 0},
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
 }
 
-export async function getConnections() {
-    const data = await rabbitMQFetch('connections', {
-        cache: 'no-store',
-        next: {revalidate: 0},
-        headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        }
-    });
-    return data;
-}
-
-export async function getChannels() {
-    return rabbitMQFetch('/channels', {
-        cache: 'no-store',
-        next: {revalidate: 0},
-        headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        }
-    });
-}
-
-export async function getVhosts() {
-    return rabbitMQFetch('/vhosts', {
-        cache: 'no-store',
-        next: {revalidate: 0},
-        headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        }
-    });
-}
-
-export async function getBindings(vhost: string, exchangeName: string) {
+export async function getBindings(vhost: string, exchangeName: string, destinationType: 'q' | 'e', destination: string) {
     const encodedVhost = encodeURIComponent(vhost);
     const encodedExchange = encodeURIComponent(exchangeName);
-    return rabbitMQFetch(`/api/bindings/${encodedVhost}/e/${encodedExchange}/source`, {
+    const encodedDestination = encodeURIComponent(destination);
+    const encodedDestinationType = encodeURIComponent(destinationType);
+    return rabbitMQFetch(`/bindings/${encodedVhost}/e/${encodedExchange}/${encodedDestinationType}/${encodedDestination}`, {
         cache: 'no-store',
         next: {revalidate: 0},
         headers: {
@@ -389,10 +356,11 @@ export async function getQueueDetails(vhost: string, queueName: string) {
     });
 }
 
-export async function getQueueBindings(vhost: string, queueName: string) {
+export async function deleteMessage(vhost: string, queueName: string, messageId: string) {
     const encodedVhost = encodeURIComponent(vhost);
     const encodedQueue = encodeURIComponent(queueName);
-    return rabbitMQFetch(`/queues/${encodedVhost}/${encodedQueue}/bindings`, {
+    return rabbitMQFetch(`/queues/${encodedVhost}/${encodedQueue}/${messageId}/delete`, {
+        method: 'DELETE',
         cache: 'no-store',
         next: {revalidate: 0},
         headers: {
@@ -446,51 +414,6 @@ export async function getMessages(
     })
 }
 
-// Health check functions
-export async function checkAliveness(vhost: string = '/') {
-    const encodedVhost = encodeURIComponent(vhost);
-    return rabbitMQFetch(`/aliveness-test/${encodedVhost}`, {
-        cache: 'no-store',
-        next: {revalidate: 0},
-        headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        }
-    });
-}
-
-export async function checkHealth() {
-    return Promise.all([
-        rabbitMQFetch('/health/checks/alarms', {
-            cache: 'no-store',
-            next: {revalidate: 0},
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            }
-        }),
-        rabbitMQFetch('/health/checks/local-alarms', {
-            cache: 'no-store',
-            next: {revalidate: 0},
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            }
-        }),
-        rabbitMQFetch('/health/checks/virtual-hosts', {
-            cache: 'no-store',
-            next: {revalidate: 0},
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            }
-        }),
-    ]);
-}
 
 // Connection related functions
 export async function closeConnection(name: string) {
@@ -568,17 +491,6 @@ export interface ExchangeStats {
         publish_out_details: {
             rate: number;
         };
-    };
-}
-
-export interface ConnectionStats {
-    recv_oct: number;
-    send_oct: number;
-    recv_oct_details: {
-        rate: number;
-    };
-    send_oct_details: {
-        rate: number;
     };
 }
 

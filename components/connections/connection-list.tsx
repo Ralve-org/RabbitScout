@@ -10,11 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatBytes, formatRate } from "@/lib/utils"
-import { ArrowUpDown, Unplug } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useRealtimeUpdates } from "@/hooks/use-realtime-updates"
-import { API_ENDPOINTS, RabbitMQError } from "@/lib/utils"
+import { formatBytes, formatRate, API_ENDPOINTS, RabbitMQError} from "@/lib/utils"
+import {ArrowUpDown, Unplug} from "lucide-react"
+import {Button} from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { ConnectionListSkeleton } from "./connection-list-skeleton"
 
@@ -61,7 +59,7 @@ interface Connection {
 type SortField = keyof Connection
 type SortOrder = "asc" | "desc"
 
-export function ConnectionList({ connections: initialConnections }: { connections?: Connection[] }) {
+export function ConnectionList({ connections: initialConnections }: Readonly<{ connections?: Connection[] }>) {
   const [connections, setConnections] = useState<Connection[]>(initialConnections || [])
   const [isLoading, setIsLoading] = useState(!initialConnections)
   const [error, setError] = useState<RabbitMQError | null>(null)
@@ -74,12 +72,6 @@ export function ConnectionList({ connections: initialConnections }: { connection
       fetchConnections()
     }
   }, [])
-
-  const realtimeConnections = useRealtimeUpdates('connection', connections, (current, update) => {
-    return current.map(conn => 
-      conn.name === update.name ? { ...conn, ...update } : conn
-    )
-  })
 
   const fetchConnections = async () => {
     try {
@@ -116,7 +108,7 @@ export function ConnectionList({ connections: initialConnections }: { connection
       setSortOrder("asc")
     }
 
-    const sortedConnections = [...realtimeConnections].sort((a, b) => {
+    const sortedConnections = [...connections].sort((a, b) => {
       const aValue = a[field]
       const bValue = b[field]
 
@@ -153,8 +145,8 @@ export function ConnectionList({ connections: initialConnections }: { connection
           <TableHeader>
             <TableRow>
               <TableHead className="w-[12.5%]">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   onClick={() => handleSort('name')}
                   className="w-full flex items-center justify-center gap-1"
                 >
@@ -162,8 +154,8 @@ export function ConnectionList({ connections: initialConnections }: { connection
                 </Button>
               </TableHead>
               <TableHead className="w-[12.5%]">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   onClick={() => handleSort('user')}
                   className="w-full flex items-center justify-center gap-1"
                 >
@@ -174,8 +166,8 @@ export function ConnectionList({ connections: initialConnections }: { connection
               <TableHead className="w-[12.5%]">Protocol</TableHead>
               <TableHead className="w-[12.5%]">SSL/TLS</TableHead>
               <TableHead className="w-[12.5%]">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   onClick={() => handleSort('channels')}
                   className="w-full flex items-center justify-center gap-1"
                 >
@@ -183,8 +175,8 @@ export function ConnectionList({ connections: initialConnections }: { connection
                 </Button>
               </TableHead>
               <TableHead className="w-[12.5%]">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   onClick={() => handleSort('recv_oct')}
                   className="w-full flex items-center justify-center gap-1"
                 >
@@ -192,18 +184,16 @@ export function ConnectionList({ connections: initialConnections }: { connection
                 </Button>
               </TableHead>
               <TableHead className="w-[12.5%]">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => handleSort('actions')}
-                  className="w-full flex items-center justify-center gap-1"
-                >
-                  Actions <ArrowUpDown className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  className="w-full flex items-center justify-center gap-1">
+                  Actions
                 </Button>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {realtimeConnections.length === 0 ? (
+            {connections.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-48">
                   <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -214,7 +204,7 @@ export function ConnectionList({ connections: initialConnections }: { connection
                 </TableCell>
               </TableRow>
             ) : (
-              realtimeConnections.map((connection) => (
+                connections.map((connection) => (
                 <TableRow key={connection.name}>
                   <TableCell className="w-[12.5%] font-medium">
                     {connection.client_properties?.product || "Unknown Client"}

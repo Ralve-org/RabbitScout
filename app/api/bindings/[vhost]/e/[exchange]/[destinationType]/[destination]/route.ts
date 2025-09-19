@@ -6,12 +6,12 @@ export const revalidate = 0
 
 export async function GET(
   request: Request,
-  { params }: { params: { vhost: string; exchange: string } }
+  { params }: { params: { vhost: string; exchange: string, destinationType: 'q' | 'e', destination: string } }
 ) {
   try {
-    const { vhost, exchange } = params
+    const { vhost, exchange, destinationType, destination } = params
     const baseUrl = `${getRabbitMQBaseUrl()}/api`
-    const url = `${baseUrl}/bindings/${encodeURIComponent(vhost)}/e/${encodeURIComponent(exchange)}/source`
+    const url = `${baseUrl}/bindings/${encodeURIComponent(vhost)}/e/${encodeURIComponent(exchange)}/${encodeURIComponent(destinationType)}/${encodeURIComponent(destination)}`
 
     console.log(`[API Route] Fetching bindings for exchange ${exchange} in vhost ${vhost}`)
     console.log(`[API Route] Using host: ${getRabbitMQBaseUrl()}`)

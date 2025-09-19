@@ -21,6 +21,7 @@ import {
 import {getMessages, purgeQueue} from "@/lib/utils"
 import {MoreHorizontal, Trash} from "lucide-react"
 import {useRouter} from "next/navigation"
+import {useMaxNrOfMessagesStore, useRefreshStore} from "@/lib/store";
 
 interface QueueOperationsProps {
     queue: {
@@ -37,6 +38,8 @@ export function QueueOperations({queue}: Readonly<QueueOperationsProps>) {
     const [messageViewerOpen, setMessageViewerOpen] = useState(false)
     const [messages, setMessages] = useState<[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const {maxNrOfMessages} = useMaxNrOfMessagesStore()
+
 
     const onPurge = async () => {
         try {
@@ -54,7 +57,7 @@ export function QueueOperations({queue}: Readonly<QueueOperationsProps>) {
     const onViewMessages = async () => {
         try {
             setIsLoading(true)
-            const fetchedMessages = await getMessages(queue.vhost, queue.name, 50, 'ack_requeue_true')
+            const fetchedMessages = await getMessages(queue.vhost, queue.name, maxNrOfMessages, 'ack_requeue_true')
             setMessages(fetchedMessages)
             setMessageViewerOpen(true)
         } catch (error) {
@@ -113,6 +116,7 @@ export function QueueOperations({queue}: Readonly<QueueOperationsProps>) {
             </Dialog>
 
             <MessageViewer
+                messageRefresh={onViewMessages}
                 messages={messages}
                 open={messageViewerOpen}
                 onOpenChange={setMessageViewerOpen}

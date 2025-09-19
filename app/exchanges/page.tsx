@@ -22,7 +22,6 @@ async function ExchangesPage() {
     }
 
     const exchanges = await response.json()
-
     return (
       <div className="flex flex-col gap-4">
         <div className="flex justify-between">

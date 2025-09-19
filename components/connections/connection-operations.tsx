@@ -59,10 +59,8 @@ export function ConnectionOperations({ connection, onClose }: ConnectionOperatio
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center">
-          <DropdownMenuItem
-            className="text-destructive cursor-not-allowed opacity-50"
-            disabled
-          >
+          <DropdownMenuItem onClick={() => setCloseDialogOpen(true)}
+            className="text-destructive">
             <XCircle className="mr-2 h-4 w-4" />
             Close Connection
           </DropdownMenuItem>
@@ -75,11 +73,7 @@ export function ConnectionOperations({ connection, onClose }: ConnectionOperatio
             <DialogTitle>Close Connection</DialogTitle>
             <DialogDescription>
               Are you sure you want to close this connection?
-              {connection.client_properties?.product && (
-                <div className="mt-2 text-sm">
-                  Client: {connection.client_properties.product}
-                </div>
-              )}
+              {connection.client_properties?.product && (` Client: ${connection.client_properties.product}`)}
               <div className="mt-1 text-sm font-mono">{connection.name}</div>
             </DialogDescription>
           </DialogHeader>

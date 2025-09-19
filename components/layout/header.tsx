@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth"
 import { MainNav } from "./main-nav"
 import { RefreshToggle } from "@/components/refresh-toggle"
+import {MaxNrOfMessagesToggle} from "@/components/max-nr-of-messages-toggle";
 
 export function Header() {
   const router = useRouter()
@@ -23,6 +24,7 @@ export function Header() {
       <div className="flex h-14 items-center px-16">
         <MainNav />
         <div className="ml-auto flex items-center gap-2">
+          <MaxNrOfMessagesToggle />
           <RefreshToggle />
           <ModeToggle />
           <Button variant="outline" onClick={handleLogout}>

@@ -6,7 +6,19 @@ services:
     environment:
       - NEXT_PUBLIC_RABBITMQ_HOST
       - NEXT_PUBLIC_RABBITMQ_PORT
+      - NEXT_PUBLIC_RABBITMQ_LISTENER_PORT
       - NEXT_PUBLIC_RABBITMQ_VHOST
       - RABBITMQ_USERNAME
       - RABBITMQ_PASSWORD
       - NEXT_PUBLIC_API_URL
+
+  nls-rabbitmq:
+    image: ndwnls.azurecr.io/docker.io/library/rabbitmq:4.0.9-management-alpine
+    hostname: nls-rabbitmq
+    user: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./docker/nls-rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./docker/nls-rabbitmq/load-definitions.json:/etc/rabbitmq/load-definitions.json
