@@ -4,12 +4,14 @@ import { createApiResponse, createApiErrorResponse, NO_CACHE_HEADERS, NO_CACHE_F
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+type Props = { params: Promise<{ vhost: string; queue: string }>}
+
 export async function DELETE(
     request: Request,
-    { params }: { params: { vhost: string; queue: string } }
+    { params }: Props
 ) {
     try {
-        const { vhost, queue } = params
+        const { vhost, queue } = await params;
         const url = `${getRabbitMQBaseUrl()}/api/queues/${encodeURIComponent(vhost)}/${encodeURIComponent(queue)}/contents`
 
         console.log(`[API Route] purge queue ${queue} in vhost ${vhost}`)

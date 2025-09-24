@@ -4,12 +4,14 @@ import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from '@/lib/config';
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+type Props = { params: Promise<{ vhost: string; exchange: string }>}
+
 export async function GET(
   request: Request,
-  { params }: { params: { vhost: string; exchange: string } }
+  { params }: Props
 ) {
   try {
-    const { vhost, exchange } = params
+    const { vhost, exchange } = await params
     const url = `${getRabbitMQBaseUrl()}/api/exchanges/${encodeURIComponent(vhost)}/${encodeURIComponent(exchange)}/bindings/source`
 
     console.log(`[API Route] Fetching bindings for exchange ${exchange} in vhost ${vhost}`)

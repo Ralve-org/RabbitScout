@@ -74,13 +74,9 @@ function Overview() {
           throw new Error('User not authenticated');
         }
 
-        const { username } = state.user;
-        const host = process.env.NEXT_PUBLIC_RABBITMQ_HOST;
-        const port = process.env.NEXT_PUBLIC_RABBITMQ_PORT || '15672';
-
         const [overviewResponse, queuesResponse] = await Promise.all([
-          getOverview(host, port, username),
-          getQueues(host, port, username)
+          getOverview(),
+          getQueues()
         ]);
 
         setOverviewData(overviewResponse);

@@ -50,7 +50,7 @@ RabbitScout provides a comprehensive suite of features for managing your RabbitM
   - 📋 Detailed queue listings with search and filter
   - 🔍 Message inspection capabilities
   - ⚡ Real-time queue metrics
-  - 🗑️ Queue operations (purge, delete)
+  - 🗑️ Queue operations (purge, delete, delete message)
   - 📥 Message publishing interface
   
 - **Exchange & Binding Viewing**
@@ -123,6 +123,7 @@ Before you begin, ensure you have:
      # Required Configuration
      NEXT_PUBLIC_RABBITMQ_HOST=your-rabbitmq-host    # RabbitMQ server hostname
      NEXT_PUBLIC_RABBITMQ_PORT=15672                 # RabbitMQ management port
+     NEXT_PUBLIC_RABBITMQ_LISTENER_PORT=5672         # RabbitMQ port
      NEXT_PUBLIC_RABBITMQ_VHOST=/                    # Virtual host
 
      # Authentication
@@ -194,6 +195,7 @@ services:
     environment:
       - NEXT_PUBLIC_RABBITMQ_HOST=your-rabbitmq-host
       - NEXT_PUBLIC_RABBITMQ_PORT=15672
+      - NEXT_PUBLIC_RABBITMQ_LISTENER_PORT=5672
       - NEXT_PUBLIC_RABBITMQ_VHOST=/
       - RABBITMQ_USERNAME=your-username
       - RABBITMQ_PASSWORD=your-password
@@ -205,6 +207,7 @@ services:
 docker run -p 3000:3000 \
   -e NEXT_PUBLIC_RABBITMQ_HOST=your-rabbitmq-host \
   -e NEXT_PUBLIC_RABBITMQ_PORT=15672 \
+  -e NEXT_PUBLIC_RABBITMQ_LISTENER_PORT=5672 \
   -e NEXT_PUBLIC_RABBITMQ_VHOST=/ \
   -e RABBITMQ_USERNAME=your-username \
   -e RABBITMQ_PASSWORD=your-password \
@@ -298,7 +301,7 @@ These screenshots showcase the dashboard overview tab in both light and dark mod
 - 📈 Extended metrics and analytics
 
 ### Known Limitations
-- Binding management functionality is currently disabled
+- Binding management functionality actions are in development
 - Channel and connection management actions are in development
 - Some advanced features are view-only at this time
 

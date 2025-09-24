@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {deleteMessage} from "@/lib/utils"
 import {MoreHorizontal, Trash} from "lucide-react"
-import {useRouter} from "next/navigation";
 
 interface MessageOperationsProps {
   messageRefresh: () => void;
@@ -51,7 +50,6 @@ type DeleteResponse = {
 }
 
 export function MessageOperations({messageRefresh, message}: Readonly<MessageOperationsProps>) {
-  const router = useRouter()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteResult, setDeleteResult] = useState<DeleteResponse>();

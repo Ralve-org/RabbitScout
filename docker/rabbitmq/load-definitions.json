@@ -30,7 +30,7 @@
   "global_parameters": [
     {
       "name": "cluster_name",
-      "value": "rabbit@nls_rabbitmq"
+      "value": "rabbit@rabbitmq"
     },
     {
       "name": "internal_cluster_id",
@@ -98,7 +98,7 @@
       "vhost": "/",
       "destination": "test-queue",
       "destination_type": "queue",
-      "routing_key": "ndw.nls.test.imported",
+      "routing_key": "test.imported",
       "arguments": {}
     }
   ]

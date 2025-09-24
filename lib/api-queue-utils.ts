@@ -2,13 +2,22 @@ import amqp, {ChannelModel, ConfirmChannel, ConsumeMessage, Options} from 'amqpl
 import {wait} from "next/dist/lib/wait";
 import {RABBITMQ_CONFIG} from "@/lib/config";
 
-export async function deleteRabbitMqMessage(vhost: string, queue: string, messageId: string): Promise<DeleteResponse> {
+export async function deleteRabbitMqMessage(queue: string, messageId: string): Promise<DeleteResponse> {
   return (await QueueManager.init().deleteMessage(queue, messageId));
 }
+
+export async function sendRabbitMqMessage(queue: string, messageId: string, messageBody: string): Promise<SendResponse> {
+  return (await QueueManager.init().sendMessage(queue, messageBody, {messageId: messageId}));
+}
+
 
 interface DeleteResponse {
   deleted: boolean;
   message?: amqp.ConsumeMessage;
+}
+
+interface SendResponse {
+  success: boolean;
 }
 
 class ConsumeError extends Error {
@@ -39,6 +48,18 @@ export class QueueManager {
     });
   }
 
+  public async sendMessage(queueName: string, messageBody: string, options: Options.Publish): Promise<SendResponse> {
+    const channel = await this.createChannel();
+
+    const messageSent = channel.sendToQueue(queueName, Buffer.from(messageBody), options);
+
+    await this.stopConsumerAndCloseChannel(channel)
+
+    return {
+      success: messageSent
+    };
+  }
+
   public async deleteMessage(queueName: string, messageId: string): Promise<DeleteResponse> {
     const channel = await this.createChannel();
 
@@ -53,7 +74,7 @@ export class QueueManager {
         if (error instanceof ConsumeError) {
           this.stopConsumerAndCloseChannel(channel, error.consumerTag);
         } else {
-          this.stopConsumerAndCloseChannel(channel)
+          this.stopConsumerAndCloseChannel(channel);
         }
         reject(new Error(`Error deleting the message: '${messageId}' from queue '${queueName}'`, error));
       });

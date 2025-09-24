@@ -1,4 +1,4 @@
-import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from '../../../lib/config'
+import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from '@/lib/config'
 import { createApiResponse, createApiErrorResponse, NO_CACHE_HEADERS, NO_CACHE_FETCH_OPTIONS } from '@/lib/api-utils'
 import { NextResponse } from 'next/server'
 

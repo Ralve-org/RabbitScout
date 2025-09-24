@@ -1,15 +1,18 @@
-import { createApiResponse, createApiErrorResponse, NO_CACHE_HEADERS, NO_CACHE_FETCH_OPTIONS } from '@/lib/api-utils'
-import { getRabbitMQAuthHeaders, getRabbitMQBaseUrl } from '@/lib/config';
+import {createApiErrorResponse, createApiResponse, NO_CACHE_FETCH_OPTIONS, NO_CACHE_HEADERS} from '@/lib/api-utils'
+import {getRabbitMQAuthHeaders, getRabbitMQBaseUrl} from '@/lib/config';
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+type Props = { params: Promise<{ vhost: string; exchange: string, destinationType: 'q' | 'e', destination: string }> }
+
+
 export async function GET(
-  request: Request,
-  { params }: { params: { vhost: string; exchange: string, destinationType: 'q' | 'e', destination: string } }
+    request: Request,
+    {params}: Props
 ) {
   try {
-    const { vhost, exchange, destinationType, destination } = params
+    const {vhost, exchange, destinationType, destination} = await params
     const baseUrl = `${getRabbitMQBaseUrl()}/api`
     const url = `${baseUrl}/bindings/${encodeURIComponent(vhost)}/e/${encodeURIComponent(exchange)}/${encodeURIComponent(destinationType)}/${encodeURIComponent(destination)}`
 
@@ -33,8 +36,8 @@ export async function GET(
         error: errorText
       })
       return createApiErrorResponse(
-        `Failed to fetch exchange bindings: ${response.statusText}`,
-        response.status
+          `Failed to fetch exchange bindings: ${response.statusText}`,
+          response.status
       )
     }
 

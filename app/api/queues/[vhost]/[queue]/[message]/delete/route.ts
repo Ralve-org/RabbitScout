@@ -18,7 +18,7 @@ export async function DELETE(
         console.log(`[API Route] delete message from queue ${queue} in vhost ${vhost}`)
         console.log(`[API Route] Using host: ${getRabbitMQBaseUrl()}`)
 
-        const deleteResponse = await deleteRabbitMqMessage(vhost, queue, message);
+        const deleteResponse = await deleteRabbitMqMessage(queue, message);
 
         if (deleteResponse.deleted) {
             console.log(`[API Route] Successfully deleted message ${message}`)
