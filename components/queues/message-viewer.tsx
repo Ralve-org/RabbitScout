@@ -20,50 +20,31 @@ import {
 } from "lucide-react"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select"
 import {MessageOperations} from "@/components/queues/message-operations";
+import {QueueMessage} from "@/lib/QueueMessage";
+import {Queue} from "@/lib/Queue";
 
-interface Message {
-  payload: string
-  payload_bytes: number
-  redelivered: boolean
-  exchange: string
-  routing_key: string
-  message_count: number
-  properties: {
-    headers: Record<string, never>
-    delivery_mode: number
-    timestamp?: string
-    content_type?: string
-    content_encoding?: string
-    correlation_id?: string
-    reply_to?: string
-    expiration?: string
-    message_id?: string
-    type?: string
-    user_id?: string
-    app_id?: string
-    cluster_id?: string
-  }
-}
+
 
 interface MessageViewerProps {
-  messages: Message[];
+  messages: QueueMessage[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  queueList: Queue[];
   queueInfo: { messages_ready: number; messages_unacknowledged: number, queue: string, vhost: string };
   messageRefresh: () => void;
 }
 
 type SortableField = "routing_key" | "payload_bytes" | "redelivered"
 
-export function MessageViewer({messageRefresh, messages, open, onOpenChange, queueInfo}: Readonly<MessageViewerProps>) {
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+export function MessageViewer({messageRefresh, messages, open, onOpenChange, queueList, queueInfo}: Readonly<MessageViewerProps>) {
+  const [selectedMessage, setSelectedMessage] = useState<QueueMessage | null>(null)
   const [sortField, setSortField] = useState<SortableField>("routing_key")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [currentPage, setCurrentPage] = useState(1)
   const [isCopied, setIsCopied] = useState(false)
   const [messagesPerPage, setMessagesPerPage] = useState(10)
   const [totalPages, setTotalPages] = useState(0)
-  const [paginatedMessages, setPaginatedMessages] = useState<Message[]>([])
+  const [paginatedMessages, setPaginatedMessages] = useState<QueueMessage[]>([])
 
   useEffect(() => {
     setSelectedMessage(null);
@@ -248,6 +229,7 @@ export function MessageViewer({messageRefresh, messages, open, onOpenChange, que
                             </TableCell>
                             <TableCell className="text-center">
                               <MessageOperations
+                                  queueList={queueList}
                                   messageRefresh={messageRefresh}
                                   message={{...message, vhost: queueInfo.vhost, queue: queueInfo.queue}}></MessageOperations>
                             </TableCell>

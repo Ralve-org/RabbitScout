@@ -1,6 +1,7 @@
 import {type ClassValue, clsx} from "clsx"
 import {twMerge} from "tailwind-merge"
 import {API_TIMEOUT_MS} from "./config"
+import {QueueMessage} from "@/lib/QueueMessage";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
@@ -386,6 +387,23 @@ export async function purgeQueue(vhost: string, queueName: string) {
     });
 }
 
+export async function sendMessage(vhost: string, queueName: string, messageId: string, message: QueueMessage) {
+  const encodedVhost = encodeURIComponent(vhost);
+  const encodedQueue = encodeURIComponent(queueName);
+  const encodedMessageId = encodeURIComponent(messageId);
+  return rabbitMQFetch(`/queues/${encodedVhost}/${encodedQueue}/${encodedMessageId}/send`, {
+    method: 'POST',
+    body:  JSON.stringify(message),
+    cache: 'no-store',
+    next: {revalidate: 0},
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+}
+
 // Message related functions
 export async function getMessages(
     vhost: string,
@@ -465,22 +483,6 @@ export async function getNodeStats() {
 }
 
 // Types
-export interface QueueStats {
-    messages: number;
-    messages_ready: number;
-    messages_unacknowledged: number;
-    message_stats?: {
-        publish: number;
-        publish_details: {
-            rate: number;
-        };
-        deliver_get: number;
-        deliver_get_details: {
-            rate: number;
-        };
-    };
-}
-
 export interface ExchangeStats {
     message_stats?: {
         publish_in: number;

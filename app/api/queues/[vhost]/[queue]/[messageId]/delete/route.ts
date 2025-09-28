@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 
-type RequestProps = { params: Promise<{ vhost: string, queue: string, message: string }> }
+type RequestProps = { params: Promise<{ vhost: string, queue: string, messageId: string }> }
 
 
 export async function DELETE(
@@ -14,20 +14,20 @@ export async function DELETE(
     {params}: RequestProps
 ) {
     try {
-        const {vhost, queue, message} = await params
+        const {vhost, queue, messageId} = await params
         console.log(`[API Route] delete message from queue ${queue} in vhost ${vhost}`)
         console.log(`[API Route] Using host: ${getRabbitMQBaseUrl()}`)
 
-        const deleteResponse = await deleteRabbitMqMessage(queue, message);
+        const deleteResponse = await deleteRabbitMqMessage(queue, messageId);
 
         if (deleteResponse.deleted) {
-            console.log(`[API Route] Successfully deleted message ${message}`)
+            console.log(`[API Route] Successfully deleted message ${messageId}`)
         } else {
-            console.log(`[API Route] Message not deleted ${message}`)
+            console.log(`[API Route] Message not deleted ${messageId}`)
         }
         return createApiResponse({
             deleted: deleteResponse.deleted,
-            message,
+            message: messageId,
             vhost: vhost,
             queue: queue
         });

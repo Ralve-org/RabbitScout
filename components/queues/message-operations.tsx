@@ -10,38 +10,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {deleteMessage} from "@/lib/utils"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
+import {deleteMessage, sendMessage} from "@/lib/utils"
 import {MoreHorizontal, Trash} from "lucide-react"
+import {QueueMessage} from "@/lib/QueueMessage";
+import {Queue} from "@/lib/Queue";
 
 interface MessageOperationsProps {
+  queueList: Queue[]
   messageRefresh: () => void;
   message: {
     vhost: string
     queue: string
-
-    payload: string
-    payload_bytes: number
-    redelivered: boolean
-    exchange: string
-    routing_key: string
-    message_count: number
-    properties: {
-      headers: Record<string, never>
-      delivery_mode: number
-      timestamp?: string
-      content_type?: string
-      content_encoding?: string
-      correlation_id?: string
-      reply_to?: string
-      expiration?: string
-      message_id?: string
-      type?: string
-      user_id?: string
-      app_id?: string
-      cluster_id?: string
-      messageId?: string
-    }
-  }
+  } & QueueMessage
 }
 
 type DeleteResponse = {
@@ -49,15 +30,23 @@ type DeleteResponse = {
   message: string,
 }
 
-export function MessageOperations({messageRefresh, message}: Readonly<MessageOperationsProps>) {
+type MessageSentResponse = {
+  sent: boolean;
+  message: string;
+}
+
+export function MessageOperations({messageRefresh, message, queueList}: Readonly<MessageOperationsProps>) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [copyToQueueDialogOpen, setCopyToQueueDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteResult, setDeleteResult] = useState<DeleteResponse>();
+  const [copyToQueueResult, setCopyToQueueResult] = useState<MessageSentResponse>();
   const [messageId, setMessageId] = useState('');
+  const [selectedQueue, setSelectedQueue] = useState('');
 
   useEffect(() => {
     const mapMessageId = (): string => {
-      const messageIdFromProperties = message?.properties?.messageId;
+      const messageIdFromProperties = message?.properties?.message_id;
       if (messageIdFromProperties) {
         return messageIdFromProperties;
       }
@@ -92,6 +81,24 @@ export function MessageOperations({messageRefresh, message}: Readonly<MessageOpe
     }
   }
 
+  const onCopy = async (destinationQueue: string) => {
+    try {
+      setIsLoading(true)
+      const sentResult = await sendMessage(message.vhost, destinationQueue, messageId, message) as MessageSentResponse;
+      setCopyToQueueResult(sentResult);
+      if (sentResult.sent) {
+        setCopyToQueueResult(undefined);
+        setMessageId('');
+        setCopyToQueueDialogOpen(false);
+        messageRefresh();
+      }
+    } catch (error) {
+      console.error("Failed to copy message to queue:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
       <>
         <DropdownMenu>
@@ -109,6 +116,13 @@ export function MessageOperations({messageRefresh, message}: Readonly<MessageOpe
             >
               <Trash className="mr-2 h-4 w-4"/>
               Delete Message
+            </DropdownMenuItem>
+            <DropdownMenuSeparator/>
+            <DropdownMenuItem
+                onClick={() => setCopyToQueueDialogOpen(true)}
+            >
+              <Trash className="mr-2 h-4 w-4"/>
+              Copy Message
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -144,17 +158,74 @@ export function MessageOperations({messageRefresh, message}: Readonly<MessageOpe
                 setDeleteDialogOpen(false);
                 setDeleteResult(undefined);
                 setMessageId('');
-              }
-              }
+              }}
               >
                 Cancel
               </Button>
               <Button
                   variant="destructive"
                   onClick={onDelete}
-                  disabled={isLoading}
+                  disabled={isLoading || !messageId}
               >
                 {isLoading ? "Deleting..." : "Delete Message"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
+        <Dialog open={copyToQueueDialogOpen} onOpenChange={setCopyToQueueDialogOpen}>
+          <DialogContent>
+            {messageId !== '' ?
+                <DialogHeader>
+                  <DialogTitle>Copy message to queue?</DialogTitle><DialogDescription>
+                  Select destination queue
+                  <Select onValueChange={setSelectedQueue} value={selectedQueue}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a queue"/>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {queueList.map((queue) => (
+                          <SelectItem key={queue.name} value={queue.name}>
+                            {queue.name}
+                          </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </DialogDescription>
+                </DialogHeader>
+                :
+                <DialogHeader>
+                  <DialogTitle>Can&#39;t copy message. Message has no MessageId as a property or message_id
+                    in
+                    the message.</DialogTitle>
+                </DialogHeader>
+            }
+
+            {copyToQueueResult && !copyToQueueResult.sent && (
+                <DialogHeader>
+                  <DialogTitle>Message not sent</DialogTitle>
+                  <DialogDescription>
+                    {JSON.stringify(copyToQueueResult)}
+                  </DialogDescription>
+                </DialogHeader>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setCopyToQueueDialogOpen(false);
+                setCopyToQueueResult(undefined);
+                setMessageId('');
+              }}
+              >
+                Cancel
+              </Button>
+              <Button
+                  variant="destructive"
+                  onClick={() => onCopy(selectedQueue)}
+                  disabled={isLoading || !selectedQueue}
+              >
+                {isLoading ? "Copy to queue..." : "Copy message to queue"}
               </Button>
             </DialogFooter>
           </DialogContent>

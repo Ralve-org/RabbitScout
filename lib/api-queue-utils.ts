@@ -1,13 +1,20 @@
 import amqp, {ChannelModel, ConfirmChannel, ConsumeMessage, Options} from 'amqplib';
 import {wait} from "next/dist/lib/wait";
 import {RABBITMQ_CONFIG} from "@/lib/config";
+import {QueueMessage} from "@/lib/QueueMessage";
+import Publish = Options.Publish;
 
 export async function deleteRabbitMqMessage(queue: string, messageId: string): Promise<DeleteResponse> {
   return (await QueueManager.init().deleteMessage(queue, messageId));
 }
 
-export async function sendRabbitMqMessage(queue: string, messageId: string, messageBody: string): Promise<SendResponse> {
-  return (await QueueManager.init().sendMessage(queue, messageBody, {messageId: messageId}));
+export async function sendRabbitMqMessage(queue: string, messageId: string, message: QueueMessage): Promise<SendResponse> {
+
+  if(messageId === undefined || messageId === null || messageId.length === 0) {
+    throw new Error("Can't send message. Message id is required");
+  }
+
+  return (await QueueManager.init().sendMessage(queue, messageId, message));
 }
 
 
@@ -48,10 +55,24 @@ export class QueueManager {
     });
   }
 
-  public async sendMessage(queueName: string, messageBody: string, options: Options.Publish): Promise<SendResponse> {
+  public async sendMessage(queueName: string, messageId: string, message: QueueMessage): Promise<SendResponse> {
     const channel = await this.createChannel();
 
-    const messageSent = channel.sendToQueue(queueName, Buffer.from(messageBody), options);
+    const messageToPublishOptions = (): Publish => {
+      return {
+        messageId,
+        userId: message.properties.user_id,
+        expiration: message.properties.expiration,
+        headers: message.properties.headers,
+        timestamp: message.properties.timestamp ? Number(message.properties.timestamp) : undefined,
+        contentType: message.properties.content_type,
+        contentEncoding: message.properties.content_encoding,
+        correlationId: message.properties.correlation_id,
+        type: message.properties.type,
+      }
+    }
+
+    const messageSent = channel.sendToQueue(queueName, Buffer.from(message.payload), messageToPublishOptions());
 
     await this.stopConsumerAndCloseChannel(channel)
 
@@ -59,6 +80,7 @@ export class QueueManager {
       success: messageSent
     };
   }
+
 
   public async deleteMessage(queueName: string, messageId: string): Promise<DeleteResponse> {
     const channel = await this.createChannel();
@@ -128,7 +150,7 @@ export class QueueManager {
     if (message === null) {
       reject(new Error('Message is not defined.'));
     } else if (currentMessageId === undefined) {
-      const errorMessage = 'Message is not valid; it should have a messageId.';
+      const errorMessage = 'Message is not valid; All messages on the queue should have a messageId.';
       if (message?.fields?.consumerTag) {
         reject(new ConsumeError(errorMessage, message.fields.consumerTag));
       } else {
@@ -155,7 +177,6 @@ export class QueueManager {
       } else {
         // Not the target message, negatively acknowledge to requeue it.
         console.log(`[${targetMessageId}] Message ID '${currentMessageId}' does not match target. Nacking to requeue.`);
-        // channel.nack(message, false, true); // Requeue the message
       }
     } catch (e) {
       reject(new ConsumeError(`Error processing message ID: ${e}`, message.fields.consumerTag));

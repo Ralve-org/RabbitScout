@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { ExchangeOperations } from "@/components/exchanges/exchange-operations"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -32,7 +31,7 @@ interface ExchangeListProps {
 type SortField = keyof Exchange
 type SortOrder = "asc" | "desc"
 
-export function ExchangeList({ exchanges: initialExchanges }: ExchangeListProps) {
+export function ExchangeList({ exchanges: initialExchanges }: Readonly<ExchangeListProps>) {
   const [exchanges, setExchanges] = useState(initialExchanges)
   const [sortField, setSortField] = useState<SortField>("name")
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc")

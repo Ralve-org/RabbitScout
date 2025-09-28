@@ -13,10 +13,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {getMessages, purgeQueue} from "@/lib/utils"
 import {MoreHorizontal, Trash} from "lucide-react"
-import {useRouter} from "next/navigation"
 import {useMaxNrOfMessagesStore} from "@/lib/store";
+import {Queue} from "@/lib/Queue";
 
 interface QueueOperationsProps {
+  queueList: Queue[]
   queue: {
     name: string
     vhost: string
@@ -25,20 +26,17 @@ interface QueueOperationsProps {
   }
 }
 
-export function QueueOperations({queue}: Readonly<QueueOperationsProps>) {
-  const router = useRouter()
+export function QueueOperations({queue, queueList}: Readonly<QueueOperationsProps>) {
   const [purgeDialogOpen, setPurgeDialogOpen] = useState(false)
   const [messageViewerOpen, setMessageViewerOpen] = useState(false)
   const [messages, setMessages] = useState<[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const {maxNrOfMessages} = useMaxNrOfMessagesStore()
 
-
   const onPurge = async () => {
     try {
       setIsLoading(true)
       await purgeQueue(queue.vhost, queue.name)
-      router.refresh()
     } catch (error) {
       console.error("Failed to purge queue:", error)
     } finally {
@@ -48,11 +46,15 @@ export function QueueOperations({queue}: Readonly<QueueOperationsProps>) {
   }
 
   const onViewMessages = async () => {
+    await fetchMessages();
+    setMessageViewerOpen(true);
+  }
+
+  const fetchMessages = async () => {
     try {
       setIsLoading(true)
       const fetchedMessages = await getMessages(queue.vhost, queue.name, maxNrOfMessages, 'ack_requeue_true')
       setMessages(fetchedMessages)
-      setMessageViewerOpen(true)
     } catch (error) {
       console.error("Failed to fetch messages:", error)
     } finally {
@@ -113,6 +115,7 @@ export function QueueOperations({queue}: Readonly<QueueOperationsProps>) {
             messages={messages}
             open={messageViewerOpen}
             onOpenChange={setMessageViewerOpen}
+            queueList={queueList}
             queueInfo={{
               messages_ready: queue.messages_ready,
               messages_unacknowledged: queue.messages_unacknowledged,

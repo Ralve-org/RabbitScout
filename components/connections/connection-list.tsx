@@ -67,11 +67,6 @@ export function ConnectionList({ connections: initialConnections }: Readonly<{ c
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (!initialConnections) {
-      fetchConnections()
-    }
-  }, [])
 
   const fetchConnections = async () => {
     try {
@@ -99,6 +94,12 @@ export function ConnectionList({ connections: initialConnections }: Readonly<{ c
       })
     }
   }
+
+  useEffect(() => {
+    if (!initialConnections) {
+      fetchConnections()
+    }
+  }, [fetchConnections, initialConnections])
 
   const sortConnections = (field: SortField) => {
     if (sortField === field) {
@@ -247,13 +248,13 @@ export function ConnectionList({ connections: initialConnections }: Readonly<{ c
                     <div>
                       ↓ {formatBytes(connection.recv_oct)}
                       <div className="text-xs text-muted-foreground">
-                        {formatRate(connection.recv_oct_details.rate)} /s
+                        {connection.recv_oct_details?.rate ? formatRate(connection.recv_oct_details.rate) : 0} /s
                       </div>
                     </div>
                     <div>
                       ↑ {formatBytes(connection.send_oct)}
                       <div className="text-xs text-muted-foreground">
-                        {formatRate(connection.send_oct_details.rate)} /s
+                        {connection.send_oct_details?.rate ? formatRate(connection.send_oct_details.rate) : 0} /s
                       </div>
                     </div>
                   </TableCell>

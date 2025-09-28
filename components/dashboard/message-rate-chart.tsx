@@ -10,7 +10,6 @@ import {
   YAxis,
   Legend,
 } from "recharts"
-import { formatRate } from "@/lib/utils"
 import { format } from 'date-fns'
 import { useState, useEffect } from 'react'
 

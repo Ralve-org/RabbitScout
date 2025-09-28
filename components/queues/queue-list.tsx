@@ -4,23 +4,12 @@ import {useEffect, useMemo, useState} from "react"
 import {QueueOperations} from "@/components/queues/queue-operations"
 import {Button} from "@/components/ui/button"
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table"
-import {cn, formatRate, QueueStats, RabbitMQError} from "@/lib/utils"
+import {cn, formatRate, RabbitMQError} from "@/lib/utils"
 import {ArrowUpDown} from "lucide-react"
 import {useToast} from "@/hooks/use-toast"
 import {useRefreshStore} from "@/lib/store"
 import {Skeleton} from "@/components/ui/skeleton"
-
-interface Queue extends QueueStats {
-  name: string
-  vhost: string
-  state: string
-  consumers: number
-  consumer_utilisation: number
-  policy: string
-  exclusive: boolean
-  auto_delete: boolean
-  durable: boolean
-}
+import {Queue} from "@/lib/Queue";
 
 interface QueueListProps {
   queues?: Queue[]
@@ -331,7 +320,7 @@ export function QueueList({queues: initialQueues}: Readonly<QueueListProps>) {
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex justify-center">
-                            <QueueOperations queue={queue}/>
+                            <QueueOperations queue={queue} queueList={queues}/>
                           </div>
                         </TableCell>
                       </TableRow>

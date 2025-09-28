@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { closeConnection } from "@/lib/utils"
 import { MoreHorizontal, XCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
 
 interface ConnectionOperationsProps {
   connection: {
@@ -32,7 +31,6 @@ interface ConnectionOperationsProps {
 }
 
 export function ConnectionOperations({ connection, onClose }: ConnectionOperationsProps) {
-  const router = useRouter()
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -72,9 +70,11 @@ export function ConnectionOperations({ connection, onClose }: ConnectionOperatio
           <DialogHeader>
             <DialogTitle>Close Connection</DialogTitle>
             <DialogDescription>
-              Are you sure you want to close this connection?
-              {connection.client_properties?.product && (` Client: ${connection.client_properties.product}`)}
-              <div className="mt-1 text-sm font-mono">{connection.name}</div>
+              <>
+                Are you sure you want to close this connection?
+                {connection.client_properties?.product && (` Client: ${connection.client_properties.product}`)}
+                <div className="mt-1 text-sm font-mono">{connection.name}</div>
+              </>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

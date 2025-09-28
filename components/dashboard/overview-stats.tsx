@@ -1,8 +1,8 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatBytes, formatRate, formatUptime, rabbitMQFetch, getNodeStats } from "@/lib/utils"
-import { Activity, MessageSquare, Network, Server } from "lucide-react"
+import { formatBytes, formatUptime, rabbitMQFetch, getNodeStats } from "@/lib/utils"
+import { MessageSquare, Network, Server } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRefreshStore } from "@/lib/store"
 
@@ -13,7 +13,7 @@ interface StatsCardProps {
   icon: React.ReactNode
 }
 
-function StatsCard({ title, value, description, icon }: StatsCardProps) {
+function StatsCard({ title, value, description, icon }: Readonly<StatsCardProps>) {
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -35,7 +35,7 @@ interface OverviewStatsProps {
   onDataUpdate?: (data: any) => void;
 }
 
-export function OverviewStats({ data: initialData, onDataUpdate }: OverviewStatsProps) {
+export function OverviewStats({ data: initialData, onDataUpdate }: Readonly<OverviewStatsProps>) {
   const [data, setData] = useState(initialData);
   const [nodeStats, setNodeStats] = useState<any>(null);
   const { interval } = useRefreshStore();
@@ -54,7 +54,7 @@ export function OverviewStats({ data: initialData, onDataUpdate }: OverviewStats
         });
 
         // Then get node stats using the node name from overview
-        const newNodeStats = await getNodeStats(newData.node);
+        const newNodeStats = await getNodeStats();
         console.log('[OverviewStats] Node Stats:', {
           raw: newNodeStats,
           memUsed: newNodeStats?.mem_used,
@@ -86,10 +86,8 @@ export function OverviewStats({ data: initialData, onDataUpdate }: OverviewStats
         clearInterval(intervalId);
       }
     };
-  }, [interval]);
+  }, [interval, onDataUpdate]);
 
-  const messageRate = data.message_stats?.publish_details?.rate ?? 0;
-  const deliveryRate = data.message_stats?.deliver_get_details?.rate ?? 0;
   const totalMessages = data.queue_totals?.messages ?? 0;
   const messagesReady = data.queue_totals?.messages_ready ?? 0;
   const messagesUnacked = data.queue_totals?.messages_unacknowledged ?? 0;

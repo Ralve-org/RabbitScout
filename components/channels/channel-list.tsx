@@ -82,36 +82,38 @@ export function ChannelList() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc")
   const {toast} = useToast()
 
-  const fetchChannels = async () => {
-    try {
-      const response = await fetch(API_ENDPOINTS.channels.list)
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText)
-      }
-      const data = await response.json()
-      setChannels(data)
-      setError(null)
-      setIsLoading(false)
-    } catch (err) {
-      console.error("Error fetching channels:", err)
-      setError({
-        status: 503,
-        message: 'Unable to connect to RabbitMQ server. Please check your connection settings.',
-        type: 'CONNECTION',
-        details: err instanceof Error ? err.message : String(err)
-      })
-      toast({
-        variant: "destructive",
-        title: "Error fetching channels",
-        description: "Failed to connect to RabbitMQ server",
-      })
-    }
-  }
+
 
   useEffect(() => {
+    const fetchChannels = async () => {
+      try {
+        const response = await fetch(API_ENDPOINTS.channels.list)
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(errorText)
+        }
+        const data = await response.json()
+        setChannels(data)
+        setError(null)
+        setIsLoading(false)
+      } catch (err) {
+        console.error("Error fetching channels:", err)
+        setError({
+          status: 503,
+          message: 'Unable to connect to RabbitMQ server. Please check your connection settings.',
+          type: 'CONNECTION',
+          details: err instanceof Error ? err.message : String(err)
+        })
+        toast({
+          variant: "destructive",
+          title: "Error fetching channels",
+          description: "Failed to connect to RabbitMQ server",
+        })
+      }
+    }
+
     fetchChannels()
-  }, [])
+  }, [toast])
 
   const sortChannels = (field: SortField) => {
     if (field === sortField) {
@@ -123,7 +125,7 @@ export function ChannelList() {
   }
 
   const getSortedChannels = () => {
-    const sorted = [...channels].sort((a, b) => {
+    return [...channels].sort((a, b) => {
       const multiplier = sortOrder === "asc" ? 1 : -1
       switch (sortField) {
         case "name":
@@ -138,17 +140,17 @@ export function ChannelList() {
           return multiplier * (a.messages_unacknowledged - b.messages_unacknowledged)
         case "consumers":
           return multiplier * (a.consumer_count - b.consumer_count)
-        case "rate":
-          const rateA = a.message_stats?.publish_details?.rate || 0
-          const rateB = b.message_stats?.publish_details?.rate || 0
+        case "rate": {
+          const rateA = a.message_stats?.publish_details?.rate ?? 0
+          const rateB = b.message_stats?.publish_details?.rate ?? 0
           return multiplier * (rateA - rateB)
+        }
         case "user":
           return multiplier * a.user.localeCompare(b.user)
         default:
           return 0
       }
     })
-    return sorted
   }
 
   if (isLoading && !error) {

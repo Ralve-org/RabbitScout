@@ -1,6 +1,7 @@
 import {getRabbitMQBaseUrl} from '@/lib/config'
 import {createApiErrorResponse, createApiResponse} from '@/lib/api-utils'
 import {sendRabbitMqMessage} from "@/lib/api-queue-utils";
+import {QueueMessage} from "@/lib/QueueMessage";
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -13,20 +14,16 @@ export async function POST(
 ) {
   try {
     const {vhost, queue, messageId} = await params
-    console.log(`[API Route] send message to queue ${queue} in vhost ${vhost}`)
+    console.log(`[API Route] send message ${messageId} to queue ${queue} in vhost ${vhost}`)
     console.log(`[API Route] Using host: ${getRabbitMQBaseUrl()}`)
 
-    // Get the original request body or use defaults that won't affect processing
-    const body = await request.text().catch(() => (''));
-    const bodyJson = JSON.stringify(body);
-    console.log(`[API Route] Send message request body:`, bodyJson);
-
-    const response = await sendRabbitMqMessage(queue, messageId, bodyJson);
+    const message = await request.json() as QueueMessage;
+    const response = await sendRabbitMqMessage(queue, messageId, message);
 
     console.log(`[API Route] Successfully send message to queue ${queue}`)
     return createApiResponse({
       sent: response.success,
-      message: 'Message sent to queue',
+      message: messageId,
       vhost: vhost,
       queue: queue
     });

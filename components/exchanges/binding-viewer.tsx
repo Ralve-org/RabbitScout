@@ -36,14 +36,14 @@ export function BindingViewer({
   open,
   onOpenChange,
   exchangeName,
-}: BindingViewerProps) {
+}: Readonly<BindingViewerProps>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Exchange Bindings</DialogTitle>
           <DialogDescription>
-            Viewing bindings for exchange "{exchangeName}"
+            Viewing bindings for exchange &#34;{exchangeName}&#34;
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-md border">
