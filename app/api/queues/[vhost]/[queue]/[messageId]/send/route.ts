@@ -1,7 +1,7 @@
 import {getRabbitMQBaseUrl} from '@/lib/config'
 import {createApiErrorResponse, createApiResponse} from '@/lib/api-utils'
 import {sendRabbitMqMessage} from "@/lib/api-queue-utils";
-import {QueueMessage} from "@/lib/QueueMessage";
+import {QueueMessage} from "@/lib/queue-message";
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0

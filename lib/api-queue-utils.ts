@@ -1,7 +1,7 @@
 import amqp, {ChannelModel, ConfirmChannel, ConsumeMessage, Options} from 'amqplib';
 import {wait} from "next/dist/lib/wait";
 import {RABBITMQ_CONFIG} from "@/lib/config";
-import {QueueMessage} from "@/lib/QueueMessage";
+import {QueueMessage} from "@/lib/queue-message";
 import Publish = Options.Publish;
 
 export async function deleteRabbitMqMessage(queue: string, messageId: string): Promise<DeleteResponse> {

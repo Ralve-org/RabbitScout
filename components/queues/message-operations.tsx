@@ -13,8 +13,8 @@ import {
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 import {deleteMessage, sendMessage} from "@/lib/utils"
 import {MoreHorizontal, Trash} from "lucide-react"
-import {QueueMessage} from "@/lib/QueueMessage";
-import {Queue} from "@/lib/Queue";
+import {QueueMessage} from "@/lib/queue-message";
+import {Queue} from "@/lib/queue";
 
 interface MessageOperationsProps {
   queueList: Queue[]

@@ -1,7 +1,7 @@
 import {type ClassValue, clsx} from "clsx"
 import {twMerge} from "tailwind-merge"
 import {API_TIMEOUT_MS} from "./config"
-import {QueueMessage} from "@/lib/QueueMessage";
+import {QueueMessage} from "@/lib/queue-message";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))

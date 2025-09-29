@@ -9,7 +9,7 @@ import {ArrowUpDown} from "lucide-react"
 import {useToast} from "@/hooks/use-toast"
 import {useRefreshStore} from "@/lib/store"
 import {Skeleton} from "@/components/ui/skeleton"
-import {Queue} from "@/lib/Queue";
+import {Queue} from "@/lib/queue";
 
 interface QueueListProps {
   queues?: Queue[]

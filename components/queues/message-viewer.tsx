@@ -20,8 +20,8 @@ import {
 } from "lucide-react"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select"
 import {MessageOperations} from "@/components/queues/message-operations";
-import {QueueMessage} from "@/lib/QueueMessage";
-import {Queue} from "@/lib/Queue";
+import {QueueMessage} from "@/lib/queue-message";
+import {Queue} from "@/lib/queue";
 
 
 

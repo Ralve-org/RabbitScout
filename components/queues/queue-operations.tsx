@@ -14,7 +14,7 @@ import {
 import {getMessages, purgeQueue} from "@/lib/utils"
 import {MoreHorizontal, Trash} from "lucide-react"
 import {useMaxNrOfMessagesStore} from "@/lib/store";
-import {Queue} from "@/lib/Queue";
+import {Queue} from "@/lib/queue";
 
 interface QueueOperationsProps {
   queueList: Queue[]
