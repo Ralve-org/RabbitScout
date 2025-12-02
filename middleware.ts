@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
+  // SECURITY: Block requests with x-middleware-subrequest header to prevent authorization bypass
+  // This protects against CVE-2024-XXXXX until Next.js is updated to 14.2.25+
+  if (request.headers.has('x-middleware-subrequest')) {
+    return new NextResponse('Forbidden', { status: 403 })
+  }
+  
   const authCookie = request.cookies.get('auth-storage')
   
   let isAuthenticated = false
