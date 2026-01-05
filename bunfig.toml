@@ -1,0 +1,23 @@
+[install]
+# Automatically install peer dependencies
+auto = true
+
+# Use exact versions for better reproducibility
+exact = false
+
+# Cache directory
+cache = true
+
+# Registry configuration
+registry = "https://registry.npmjs.org/"
+
+[install.scopes]
+# Add any scoped package configurations here if needed
+
+[run]
+# Enable shell completion
+shell = "bun"
+
+# Set environment variables for development
+[run.env]
+NODE_ENV = "development"
