@@ -3,6 +3,7 @@ node_modules
 npm-debug.log
 yarn-debug.log
 yarn-error.log
+bun.lockb
 
 # Next.js build output
 .next
@@ -36,3 +37,4 @@ docs
 # Misc
 .DS_Store
 *.pem
+bunfig.toml

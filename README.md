@@ -88,7 +88,7 @@ RabbitScout provides a comprehensive suite of features for managing your RabbitM
 ## 🚀 Getting Started
 
 ### System Requirements
-- Node.js 18.17 or later
+- Node.js 18.17 or later (or Bun 1.1+ for faster performance)
 - RabbitMQ Server 3.x or later
 - Modern web browser
 
@@ -96,7 +96,7 @@ RabbitScout provides a comprehensive suite of features for managing your RabbitM
 Before you begin, ensure you have:
 - 🔧 Access to a RabbitMQ instance
 - 📝 RabbitMQ management credentials
-- 💻 Node.js installed locally
+- 💻 Bun installed locally (recommended) or Node.js
 
 ### Installation
 
@@ -106,7 +106,12 @@ Before you begin, ensure you have:
    cd RabbitScout
    ```
 
-2. Install dependencies
+2. Install dependencies (using Bun for faster performance)
+   ```bash
+   bun install
+   ```
+   
+   Or with npm/yarn:
    ```bash
    npm install
    # or
@@ -155,7 +160,12 @@ Before you begin, ensure you have:
 
 ### Development
 
-Run the development server:
+Run the development server (with Bun for faster performance):
+```bash
+bun run dev
+```
+
+Or with npm/yarn:
 ```bash
 npm run dev
 # or
@@ -166,14 +176,24 @@ Access the dashboard at [http://localhost:3000](http://localhost:3000)
 
 ### Production Build
 
-Build for production:
+Build for production (with Bun):
+```bash
+bun run build
+```
+
+Or with npm/yarn:
 ```bash
 npm run build
 # or
 yarn build
 ```
 
-Start the production server:
+Start the production server (with Bun):
+```bash
+bun run start
+```
+
+Or with npm/yarn:
 ```bash
 npm start
 # or

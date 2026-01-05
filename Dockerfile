@@ -1,22 +1,22 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM oven/bun:1.1.38-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json ./
+COPY package.json bun.lockb* ./
 
 # Install dependencies
-RUN npm ci
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN bun run build
 
 # Production stage
-FROM node:18-alpine AS runner
+FROM oven/bun:1.1.38-alpine AS runner
 
 LABEL org.opencontainers.image.source="https://github.com/Ralve-org/RabbitScout" \
       org.opencontainers.image.description="Modern, intuitive dashboard for RabbitMQ management" \
@@ -37,4 +37,4 @@ COPY --from=builder /app/.next/static ./.next/static
 EXPOSE 3000
 
 # Command to run the application
-CMD ["node", "server.js"]
+CMD ["bun", "run", "start"]
