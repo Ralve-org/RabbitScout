@@ -1,6 +1,6 @@
 {
   "name": "rabbitscout",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,39 +8,36 @@
     "start": "next start",
     "lint": "next lint"
   },
-  "overrides": {
-    "glob": ">=10.5.0"
-  },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.2",
-    "@radix-ui/react-dropdown-menu": "^2.1.2",
-    "@radix-ui/react-label": "^2.1.0",
-    "@radix-ui/react-select": "^2.1.2",
-    "@radix-ui/react-slot": "^1.1.0",
-    "@radix-ui/react-toast": "^1.2.2",
-    "@types/js-cookie": "^3.0.6",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-toast": "^1.2.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
-    "js-cookie": "^3.0.5",
-    "lucide-react": "^0.462.0",
+    "lucide-react": "^0.563.0",
+    "motion": "^12.34.0",
     "next": "14.2.32",
-    "next-themes": "^0.4.3",
+    "next-themes": "^0.4.4",
     "react": "^18",
     "react-dom": "^18",
-    "recharts": "^2.13.3",
-    "tailwind-merge": "^2.5.5",
+    "recharts": "^2.15.3",
+    "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "zustand": "^5.0.1"
+    "uplot": "^1.6.32",
+    "uplot-react": "^1.2.4",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
     "eslint-config-next": "14.2.32",
     "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }
 }

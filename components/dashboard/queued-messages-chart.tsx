@@ -1,150 +1,52 @@
 "use client"
 
-import {
-  Line,
-  LineChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Legend,
-} from "recharts"
-import { format } from 'date-fns'
-import { useState, useEffect } from 'react'
+import { useMemo } from "react"
+import { StreamingChart, type ColumnarData } from "./streaming-chart"
 
 interface QueuedMessagesChartProps {
-  data: {
-    timestamp: number
-    messages: number
-    messagesReady: number
-    messagesUnacked: number
-  }[]
+  timestamps: number[]
+  totalMessages: number[]
+  readyMessages: number[]
+  unackedMessages: number[]
 }
 
-export const QueuedMessagesChart = ({ data }: QueuedMessagesChartProps) => {
-  const [currentTime, setCurrentTime] = useState(Date.now());
+export function QueuedMessagesChart({
+  timestamps,
+  totalMessages,
+  readyMessages,
+  unackedMessages,
+}: QueuedMessagesChartProps) {
+  const data: ColumnarData = useMemo(
+    () => [timestamps, totalMessages, readyMessages, unackedMessages],
+    [timestamps, totalMessages, readyMessages, unackedMessages],
+  )
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const timeDomain = {
-    start: currentTime - 60 * 1000,
-    end: currentTime,
-  };
-
-  const ticks = Array.from({ length: 7 }, (_, i) => timeDomain.start + (i * 10000));
+  const series = useMemo(
+    () => [
+      {
+        label: "Total",
+        stroke: "hsl(0, 72%, 51%)",
+        fill: "hsla(0, 72%, 51%, 0.06)",
+      },
+      {
+        label: "Ready",
+        stroke: "hsl(38, 92%, 50%)",
+        fill: "hsla(38, 92%, 50%, 0.05)",
+      },
+      {
+        label: "Unacked",
+        stroke: "hsl(217, 91%, 60%)",
+        fill: "hsla(217, 91%, 60%, 0.05)",
+      },
+    ],
+    [],
+  )
 
   return (
-    <div className="h-full bg-card rounded-lg">
-      <div className="h-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={data}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted-foreground/20" />
-            <XAxis
-              dataKey="timestamp"
-              type="number"
-              domain={[timeDomain.start, timeDomain.end]}
-              ticks={ticks}
-              tickFormatter={(timestamp) => format(new Date(timestamp), 'HH:mm:ss')}
-              scale="time"
-              className="text-muted-foreground"
-              stroke="currentColor"
-              fontSize={11}
-              dy={10}
-            />
-            <YAxis
-              tickFormatter={(value) => value.toLocaleString()}
-              className="text-muted-foreground"
-              stroke="currentColor"
-              fontSize={11}
-              width={40}
-            />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (active && payload && payload.length) {
-                  return (
-                    <div className="rounded-lg border bg-background p-2 shadow-sm">
-                      <div className="grid gap-1">
-                        <div className="text-[0.70rem] text-muted-foreground">
-                          {new Date(payload[0].payload.timestamp).toLocaleTimeString()}
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[0.70rem] text-muted-foreground">Total</span>
-                            <span className="font-medium text-red-500">{payload[0].value}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[0.70rem] text-muted-foreground">Ready</span>
-                            <span className="font-medium text-yellow-500">{payload[1].value}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[0.70rem] text-muted-foreground">Unacked</span>
-                            <span className="font-medium text-blue-400">{payload[2].value}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                }
-                return null
-              }}
-            />
-            <Legend 
-              align="right"
-              verticalAlign="top"
-              iconType="circle"
-              height={24}
-              wrapperStyle={{
-                paddingTop: 0,
-                marginTop: -24
-              }}
-              formatter={(value) => (
-                <span className="text-foreground">{value}</span>
-              )}
-            />
-            <Line
-              type="monotone"
-              dataKey="messages"
-              name="Total"
-              stroke="#ef4444"
-              strokeWidth={1.5}
-              dot={false}
-              isAnimationActive={true}
-              animationDuration={300}
-              animationBegin={0}
-            />
-            <Line
-              type="monotone"
-              dataKey="messagesReady"
-              name="Ready"
-              stroke="#eab308"
-              strokeWidth={1.5}
-              dot={false}
-              isAnimationActive={true}
-              animationDuration={300}
-              animationBegin={0}
-            />
-            <Line
-              type="monotone"
-              dataKey="messagesUnacked"
-              name="Unacked"
-              stroke="#60a5fa"
-              strokeWidth={1.5}
-              dot={false}
-              isAnimationActive={true}
-              animationDuration={300}
-              animationBegin={0}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+    <StreamingChart
+      data={data}
+      series={series}
+      yAxisFormat={(v) => v.toLocaleString()}
+    />
   )
 }

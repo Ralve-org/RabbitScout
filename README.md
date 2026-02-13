@@ -1,190 +1,92 @@
-<div align="center">
-  <img src="docs/assets/logo.png" alt="RabbitScout Logo" width="80">
-  <h1>Rabbit<span style="color: #f97316">Scout</span></h1>
-</div>
+# RabbitScout
 
-<p align="center">
-Modern, intuitive dashboard for RabbitMQ management - A powerful alternative to the default RabbitMQ Management UI.
-</p>
+A modern, open-source dashboard for RabbitMQ management. Built as a clean alternative to the default RabbitMQ Management UI.
 
-<p align="center">
-  <a href="https://github.com/Ralve-org/RabbitScout/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
-  </a>
-  <img src="https://img.shields.io/badge/RabbitMQ-Management-FF6600.svg" alt="RabbitMQ Management">
-  <img src="https://img.shields.io/badge/Next.js-14-black.svg" alt="Next.js 14">
-  <a href="https://github.com/Ralve-org/RabbitScout/stargazers">
-    <img src="https://img.shields.io/github/stars/Ralve-org/RabbitScout" alt="Stars">
-  </a>
-  <a href="https://github.com/Ralve-org/RabbitScout/issues">
-    <img src="https://img.shields.io/github/issues/Ralve-org/RabbitScout" alt="Issues">
-  </a>
-</p>
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Next.js](https://img.shields.io/badge/Next.js-14-black)
+![Stars](https://img.shields.io/github/stars/Ralve-org/RabbitScout)
 
-<div align="center">
-  <p>
-    <a href="#-features">Features</a> •
-    <a href="#-getting-started">Getting Started</a> •
-    <a href="#%EF%B8%8F-tech-stack">Tech Stack</a> •
-    <a href="#-screenshots">Screenshots</a> •
-    <a href="#-contributing">Contributing</a> •
-    <a href="#-license">License</a>
-  </p>
-</div>
+---
 
-## 🚀 Features
+## Features
 
-RabbitScout provides a comprehensive suite of features for managing your RabbitMQ instance:
+**Dashboard** — Real-time overview with message rates, queue distribution, memory usage, and uptime.
 
-### 📊 Analytics & Monitoring
-- Real-time overview of system metrics
-- Total message count monitoring
-- Queue statistics and distribution
-- Active connections tracking
-- Memory usage visualization
-- Live message rate graphs
-- Queue-specific message rate tracking
+**Queues** — List, search, sort, inspect messages, publish test messages, and purge queues.
 
-### 💼 Current Features
-- **Queue Management**
-  - 📋 Detailed queue listings with search and filter
-  - 🔍 Message inspection capabilities
-  - ⚡ Real-time queue metrics
-  - 🗑️ Queue operations (purge, delete)
-  - 📥 Message publishing interface
-  
-- **Exchange & Binding Viewing**
-  - 🔄 Exchange configuration viewing
-  - 👁️ View-only binding information
-  
-- **Connection & Channel Monitoring**
-  - 👥 View active connections
-  - 📡 Basic channel status viewing
-  - 📉 Connection metrics viewing
+**Exchanges** — View all exchanges with type, features, message rates, and binding details.
 
-### 🚧 Features In Development
-- **Binding Management**
-  - Binding creation and modification
-  - Advanced binding configuration
-  
-- **Connection & Channel Management**
-  - Advanced connection controls
-  - Channel management actions
-  - Detailed channel metrics
-  - Connection force-close capabilities
+**Connections** — Monitor active connections with throughput metrics. Close connections when needed.
 
-### 🛡️ Security Features
-- 🔐 Secure authentication system
-- 🍪 Cookie-based session management
-- ⚙️ Environment variable configuration
-- 🔒 Secure credential handling
+**Channels** — View channel state, prefetch counts, consumer counts, and close channels.
 
-### 💫 User Experience
-- 🌓 Dark/Light mode support
-- 📱 Responsive design for all devices
-- ⚡ Real-time updates
-- 🎨 Modern, clean interface
+**Auth** — Pass-through authentication. Each user logs in with their own RabbitMQ credentials. No server-side password storage.
 
-## 🚀 Getting Started
+**Theming** — Dark and light mode with a refined, minimal UI.
 
-### System Requirements
-- Node.js 18.17 or later
-- RabbitMQ Server 3.x or later
-- Modern web browser
+---
+
+## Quick Start
 
 ### Prerequisites
-Before you begin, ensure you have:
-- 🔧 Access to a RabbitMQ instance
-- 📝 RabbitMQ management credentials
-- 💻 Node.js installed locally
 
-### Installation
+- Node.js 18.17+
+- A running RabbitMQ instance with the [Management Plugin](https://www.rabbitmq.com/docs/management) enabled
 
-1. Clone the repository
-   ```bash
-   git clone https://github.com/Ralve-org/RabbitScout.git
-   cd RabbitScout
-   ```
+### Install
 
-2. Install dependencies
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
-
-3. Configure environment variables
-   - Copy the example environment file
-     ```bash
-     cp .env.example .env
-     ```
-   - Update the .env file with your RabbitMQ credentials:
-     ```env
-     # Required Configuration
-     NEXT_PUBLIC_RABBITMQ_HOST=your-rabbitmq-host    # RabbitMQ server hostname
-     NEXT_PUBLIC_RABBITMQ_PORT=15672                 # RabbitMQ management port
-     NEXT_PUBLIC_RABBITMQ_VHOST=/                    # Virtual host
-
-     # Authentication
-     RABBITMQ_USERNAME=your-username                 # RabbitMQ admin username
-     RABBITMQ_PASSWORD=your-password                 # RabbitMQ admin password
-
-     # Application Settings
-     NEXT_PUBLIC_API_URL=http://localhost:3000       # Application URL
-     ```
-
-### Authentication
-
-1. **Access the Login Page**
-   - Navigate to `http://localhost:3000/login`
-   - You'll be presented with a clean, modern login interface
-
-2. **Enter Credentials**
-   - Username: Your RabbitMQ username (default: guest)
-   - Password: Your RabbitMQ password (default: guest)
-
-3. **Important Notes**
-   - Default credentials (guest/guest) only work for localhost
-   - For remote servers, use your RabbitMQ server credentials
-   - Ensure your RabbitMQ user has management permissions
-
-4. **Session Management**
-   - Login sessions are secured with HTTP-only cookies
-   - Sessions expire after period of inactivity
-   - Use the logout button to end your session manually
-
-### Development
-
-Run the development server:
 ```bash
+git clone https://github.com/Ralve-org/RabbitScout.git
+cd RabbitScout
+npm install
+```
+
+### Configure
+
+Create a `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your RabbitMQ Management API connection:
+
+```env
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=15672
+RABBITMQ_PROTOCOL=http
+```
+
+That's it. No username or password in the config — users authenticate on the login page with their own RabbitMQ credentials.
+
+### Run
+
+```bash
+# Development
 npm run dev
-# or
-yarn dev
+
+# Production
+npm run build && npm start
 ```
 
-Access the dashboard at [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000) and log in with your RabbitMQ credentials.
 
-### Production Build
+---
 
-Build for production:
+## Docker
+
+Pull the pre-built image from GitHub Container Registry:
+
 ```bash
-npm run build
-# or
-yarn build
+docker run -p 3000:3000 \
+  -e RABBITMQ_HOST=your-rabbitmq-host \
+  -e RABBITMQ_PORT=15672 \
+  -e RABBITMQ_PROTOCOL=http \
+  ghcr.io/ralve-org/rabbitscout:latest
 ```
 
-Start the production server:
-```bash
-npm start
-# or
-yarn start
-```
+Or use Docker Compose:
 
-### 🐳 Docker Usage
-
-You can run RabbitScout using Docker in two ways:
-
-#### Using Docker Compose
 ```yaml
 services:
   rabbitscout:
@@ -192,146 +94,114 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_RABBITMQ_HOST=your-rabbitmq-host
-      - NEXT_PUBLIC_RABBITMQ_PORT=15672
-      - NEXT_PUBLIC_RABBITMQ_VHOST=/
-      - RABBITMQ_USERNAME=your-username
-      - RABBITMQ_PASSWORD=your-password
-      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - RABBITMQ_HOST=your-rabbitmq-host
+      - RABBITMQ_PORT=15672
+      - RABBITMQ_PROTOCOL=http
 ```
 
-#### Using Docker CLI
+### Build locally
+
 ```bash
-docker run -p 3000:3000 \
-  -e NEXT_PUBLIC_RABBITMQ_HOST=your-rabbitmq-host \
-  -e NEXT_PUBLIC_RABBITMQ_PORT=15672 \
-  -e NEXT_PUBLIC_RABBITMQ_VHOST=/ \
-  -e RABBITMQ_USERNAME=your-username \
-  -e RABBITMQ_PASSWORD=your-password \
-  -e NEXT_PUBLIC_API_URL=http://localhost:3000 \
-  ghcr.io/ralve-org/rabbitscout:latest
+docker build -t rabbitscout .
+docker run -p 3000:3000 -e RABBITMQ_HOST=localhost -e RABBITMQ_PORT=15672 rabbitscout
 ```
-
-## 🛠️ Tech Stack
-
-- **Framework**: [Next.js 14](https://nextjs.org/)
-- **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **State Management**: React Hooks
-- **Data Fetching**: Next.js App Router & Server Components
-
-## 📦 Project Structure
-```
-rabbitscout/
-├── app/                          # Next.js app directory
-│   ├── api/                      # API routes
-│   │   ├── auth/                # Authentication endpoints
-│   │   ├── queues/              # Queue management endpoints
-│   │   └── stats/               # Statistics and metrics endpoints
-│   ├── dashboard/               # Dashboard pages
-│   │   ├── connections/         # Connection management
-│   │   ├── exchanges/           # Exchange management
-│   │   ├── queues/             # Queue management
-│   │   └── page.tsx            # Main dashboard
-│   └── login/                   # Authentication pages
-├── components/                   # React components
-│   ├── auth/                    # Authentication components
-│   ├── dashboard/               # Dashboard components
-│   │   ├── message-rate-chart   # Message rate visualization
-│   │   ├── overview-stats       # System statistics
-│   │   ├── queue-distribution   # Queue metrics
-│   │   └── queued-messages      # Queue message charts
-│   ├── ui/                      # Reusable UI components
-│   └── shared/                  # Shared components
-├── docs/                        # Documentation
-│   └── assets/                  # Documentation assets
-├── hooks/                       # Custom React hooks
-│   ├── use-toast.ts            # Toast notifications
-│   └── use-websocket.ts        # WebSocket connections
-├── lib/                         # Utility functions
-│   ├── api/                    # API client functions
-│   ├── auth/                   # Authentication utilities
-│   ├── constants/              # Constants and configs
-│   ├── types/                  # TypeScript types
-│   └── utils/                  # Helper functions
-├── public/                      # Static assets
-│   └── images/                 # Image assets
-├── .env.example                 # Example environment variables
-├── .eslintrc.json              # ESLint configuration
-├── .gitignore                  # Git ignore rules
-├── components.json             # UI components config
-├── middleware.ts               # Next.js middleware
-├── next.config.js             # Next.js configuration
-├── package.json               # Project dependencies
-├── postcss.config.mjs         # PostCSS configuration
-├── tailwind.config.ts        # Tailwind CSS configuration
-└── tsconfig.json             # TypeScript configuration
-```
-
-## 🎨 Screenshots
-
-### Light Mode Dashboard
-![Dashboard Light Mode](docs/assets/light-dashboard.png)
-
-### Dark Mode Dashboard
-![Dashboard Dark Mode](docs/assets/dark-dashboard.png)
-
-These screenshots showcase the dashboard overview tab in both light and dark modes, featuring:
-- Real-time message rate graphs
-- Queue distribution charts
-- System overview statistics
-- Memory usage metrics
-
-## 🔄 Updates & Roadmap
-
-### Currently in Development
-- 🔗 Complete binding management system
-- 🎮 Advanced connection & channel controls
-- 📊 Enhanced channel metrics
-- 🔄 Connection management actions
-
-### Coming Soon
-- 📊 Enhanced visualization options
-- 🔔 Real-time notifications
-- 🔍 Advanced search capabilities
-- 📈 Extended metrics and analytics
-
-### Known Limitations
-- Binding management functionality is currently disabled
-- Channel and connection management actions are in development
-- Some advanced features are view-only at this time
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-### Ways to Contribute
-- 🐛 Report bugs and issues
-- 💡 Suggest new features
-- 📝 Improve documentation
-- 🔧 Submit pull requests
-
-### Development Process
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Built with [Next.js](https://nextjs.org/) 🚀
-- UI components from [shadcn/ui](https://ui.shadcn.com/) 🎨
-- Powered by [TypeScript](https://www.typescriptlang.org/) 💪
-- Styled with [Tailwind CSS](https://tailwindcss.com/) 🎯
 
 ---
 
-<div align="center">
-  Made with ❤️ by the Ralve team
-</div>
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `RABBITMQ_HOST` | Yes | `localhost` | RabbitMQ Management API hostname |
+| `RABBITMQ_PORT` | No | `15672` | Management API port (omit for default/standard ports) |
+| `RABBITMQ_PROTOCOL` | No | `http` | `http` or `https` |
+| `RABBITMQ_API_TIMEOUT_MS` | No | `15000` | API request timeout in milliseconds |
+
+---
+
+## Tech Stack
+
+- **Framework**: [Next.js 14](https://nextjs.org) (App Router, Server Components)
+- **Language**: TypeScript (strict mode, zero `any` types)
+- **UI**: [shadcn/ui](https://ui.shadcn.com) + [Tailwind CSS](https://tailwindcss.com)
+- **Charts**: [Recharts](https://recharts.org)
+- **Animation**: [Motion](https://motion.dev) (Framer Motion)
+- **State**: [Zustand](https://zustand-demo.pmnd.rs)
+- **Icons**: [Lucide](https://lucide.dev)
+
+---
+
+## Project Structure
+
+```
+app/
+  layout.tsx                      Server root layout with metadata
+  (auth)/login/page.tsx           Login page
+  (dashboard)/
+    layout.tsx                    Sidebar + header layout
+    page.tsx                      Overview dashboard
+    queues/page.tsx               Queue management
+    exchanges/page.tsx            Exchange management
+    connections/page.tsx          Connection management
+    channels/page.tsx             Channel management
+  api/
+    auth/login/route.ts           POST — validate credentials, set session cookie
+    auth/logout/route.ts          POST — clear session cookie
+    rabbitmq/[...path]/route.ts   Catch-all proxy to RabbitMQ Management API
+
+lib/
+  rabbitmq/
+    client.ts                     Server-side RabbitMQ API client
+    config.ts                     Connection configuration
+    types.ts                      TypeScript interfaces for all RabbitMQ entities
+    errors.ts                     Error classification and handling
+  auth/
+    store.ts                      Client-side auth state (Zustand)
+    session.ts                    httpOnly cookie session helpers
+  utils.ts                        Formatting utilities
+
+components/
+  layout/                         Sidebar, header
+  dashboard/                      Stat cards, charts
+  queues/                         Queue table, message viewer, publish dialog
+  exchanges/                      Exchange table, binding viewer
+  connections/                    Connection table with close support
+  channels/                       Channel table with close support
+  shared/                         Error boundary, error card
+  ui/                             shadcn/ui primitives
+```
+
+---
+
+## How Auth Works
+
+RabbitScout uses **pass-through authentication**. When a user logs in, their credentials are validated directly against the RabbitMQ Management API (`/api/whoami`). On success, the credentials are stored in an httpOnly cookie and forwarded with every subsequent API request.
+
+- No passwords are stored in environment variables or on disk
+- Each user authenticates with their own RabbitMQ account
+- Session expires after 24 hours
+- All API calls are proxied through Next.js with the user's own credentials
+
+This means RabbitMQ's built-in permission system (management, monitoring, policymaker, administrator tags) is fully respected.
+
+---
+
+## CI/CD
+
+The included GitHub Actions workflow (`.github/workflows/docker-publish.yml`) automatically builds and pushes a Docker image to GitHub Container Registry on every push to `main` or tagged release.
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run `npm run build` to verify everything compiles
+5. Open a pull request
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
