@@ -6,6 +6,8 @@ A modern, open-source dashboard for RabbitMQ management. Built as a clean altern
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
 ![Stars](https://img.shields.io/github/stars/Ralve-org/RabbitScout)
 
+![Dashboard Dark Mode](docs/assets/dark-dashboard.png)
+
 ---
 
 ## Features
@@ -116,6 +118,19 @@ docker run -p 3000:3000 -e RABBITMQ_HOST=localhost -e RABBITMQ_PORT=15672 rabbit
 | `RABBITMQ_PORT` | No | `15672` | Management API port (omit for default/standard ports) |
 | `RABBITMQ_PROTOCOL` | No | `http` | `http` or `https` |
 | `RABBITMQ_API_TIMEOUT_MS` | No | `15000` | API request timeout in milliseconds |
+
+---
+
+## Screenshots
+
+### Dark Mode
+![Dashboard Dark Mode](docs/assets/dark-dashboard.png)
+
+### Light Mode
+![Dashboard Light Mode](docs/assets/light-dashboard.png)
+
+### Login
+![Login](docs/assets/login.png)
 
 ---
 
