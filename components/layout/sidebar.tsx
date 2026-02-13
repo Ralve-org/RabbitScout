@@ -128,11 +128,11 @@ export function Sidebar() {
           )}
         </button>
 
-        {/* User + Logout */}
+        {/* Logout */}
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-[hsl(var(--sidebar-foreground))] transition-colors hover:bg-destructive/10 hover:text-destructive"
-          title={sidebarCollapsed ? "Logout" : undefined}
+          title={sidebarCollapsed ? `Logout (${user?.username})` : undefined}
         >
           <LogOut className="h-4 w-4 shrink-0" />
           <AnimatePresence>
@@ -143,7 +143,7 @@ export function Sidebar() {
                 exit={{ opacity: 0, width: 0 }}
                 className="overflow-hidden whitespace-nowrap"
               >
-                {user?.username || "Logout"}
+                Logout
               </motion.span>
             )}
           </AnimatePresence>

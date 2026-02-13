@@ -10,7 +10,7 @@ A modern, open-source dashboard for RabbitMQ management. Built as a clean altern
 
 ## Features
 
-**Dashboard** — Real-time overview with message rates, queue distribution, memory usage, and uptime.
+**Dashboard** — Real-time overview with canvas-rendered streaming charts, cluster info, queue distribution, animated stats, and memory/uptime metrics.
 
 **Queues** — List, search, sort, inspect messages, publish test messages, and purge queues.
 
@@ -124,8 +124,8 @@ docker run -p 3000:3000 -e RABBITMQ_HOST=localhost -e RABBITMQ_PORT=15672 rabbit
 - **Framework**: [Next.js 14](https://nextjs.org) (App Router, Server Components)
 - **Language**: TypeScript (strict mode, zero `any` types)
 - **UI**: [shadcn/ui](https://ui.shadcn.com) + [Tailwind CSS](https://tailwindcss.com)
-- **Charts**: [Recharts](https://recharts.org)
-- **Animation**: [Motion](https://motion.dev) (Framer Motion)
+- **Charts**: [uPlot](https://github.com/leeoniya/uPlot) (real-time streaming), [Recharts](https://recharts.org) (static)
+- **Animation**: [Motion](https://motion.dev) (spring-animated values, transitions)
 - **State**: [Zustand](https://zustand-demo.pmnd.rs)
 - **Icons**: [Lucide](https://lucide.dev)
 
@@ -147,6 +147,7 @@ app/
   api/
     auth/login/route.ts           POST — validate credentials, set session cookie
     auth/logout/route.ts          POST — clear session cookie
+    publish/route.ts              POST — publish message to exchange (handles default exchange)
     rabbitmq/[...path]/route.ts   Catch-all proxy to RabbitMQ Management API
 
 lib/
