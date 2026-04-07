@@ -23,20 +23,23 @@ export function ChannelTable({ initial }: { initial?: Channel[] }) {
   const [closing, setClosing] = useState<string | null>(null)
   const [closeTarget, setCloseTarget] = useState<Channel | null>(null)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/api/rabbitmq/channels")
+      const res = await fetch("/api/rabbitmq/channels", { signal })
       if (res.ok) {
         const data = await res.json()
         if (Array.isArray(data)) setChannels(data)
       }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return
     } finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
-    if (!initial) refresh()
-    const id = setInterval(refresh, POLL_MS)
-    return () => clearInterval(id)
+    const controller = new AbortController()
+    if (!initial) refresh(controller.signal)
+    const id = setInterval(() => refresh(controller.signal), POLL_MS)
+    return () => { clearInterval(id); controller.abort() }
   }, [initial, refresh])
 
   const handleClose = async () => {

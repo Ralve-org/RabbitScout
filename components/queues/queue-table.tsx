@@ -22,19 +22,22 @@ export function QueueTable({ initial }: { initial?: Queue[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/api/rabbitmq/queues")
+      const res = await fetch("/api/rabbitmq/queues", { signal })
       if (res.ok) setQueues(await res.json())
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    if (!initial) refresh()
-    const id = setInterval(refresh, POLL_MS)
-    return () => clearInterval(id)
+    const controller = new AbortController()
+    if (!initial) refresh(controller.signal)
+    const id = setInterval(() => refresh(controller.signal), POLL_MS)
+    return () => { clearInterval(id); controller.abort() }
   }, [initial, refresh])
 
   const toggleSort = (key: SortKey) => {
