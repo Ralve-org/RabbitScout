@@ -9,7 +9,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { MessageViewer } from "./message-viewer"
 import { PublishDialog } from "./publish-dialog"
 import { useToast } from "@/hooks/use-toast"
-import type { QueueMessage } from "@/lib/rabbitmq/types"
 
 interface QueueActionsProps {
   queueName: string
@@ -24,30 +23,10 @@ export function QueueActions({ queueName, vhost, messagesReady, messagesUnacked 
   const [purgeOpen, setPurgeOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [publishOpen, setPublishOpen] = useState(false)
-  const [messages, setMessages] = useState<QueueMessage[]>([])
   const [busy, setBusy] = useState(false)
 
-  const handleViewMessages = async () => {
-    setBusy(true)
-    try {
-      const res = await fetch(
-        `/api/rabbitmq/queues/${encodeURIComponent(vhost)}/${encodeURIComponent(queueName)}/get`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ count: 50, ackmode: "ack_requeue_true", encoding: "auto" }),
-        },
-      )
-      if (res.ok) {
-        const data = await res.json()
-        setMessages(Array.isArray(data) ? data : [])
-        setViewerOpen(true)
-      } else {
-        toast({ variant: "destructive", title: "Failed to fetch messages" })
-      }
-    } finally {
-      setBusy(false)
-    }
+  const handleViewMessages = () => {
+    setViewerOpen(true)
   }
 
   const handlePurge = async () => {
@@ -78,7 +57,7 @@ export function QueueActions({ queueName, vhost, messagesReady, messagesUnacked 
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleViewMessages} disabled={busy}>
+          <DropdownMenuItem onClick={handleViewMessages}>
             <Eye className="mr-2 h-4 w-4" /> View Messages
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setPublishOpen(true)}>
@@ -109,11 +88,16 @@ export function QueueActions({ queueName, vhost, messagesReady, messagesUnacked 
         </DialogContent>
       </Dialog>
 
-      {/* Publish dialog */}
       <PublishDialog open={publishOpen} onOpenChange={setPublishOpen} queueName={queueName} vhost={vhost} />
 
-      {/* Message viewer */}
-      <MessageViewer messages={messages} open={viewerOpen} onOpenChange={setViewerOpen} readyCount={messagesReady} unackedCount={messagesUnacked} />
+      <MessageViewer
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+        queueName={queueName}
+        vhost={vhost}
+        readyCount={messagesReady}
+        unackedCount={messagesUnacked}
+      />
     </>
   )
 }

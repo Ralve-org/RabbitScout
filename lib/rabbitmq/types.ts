@@ -196,6 +196,8 @@ export interface QueueMessage {
   exchange: string
   routing_key: string
   message_count: number
+  /** Client-assigned arrival index (0-based, oldest = 0) */
+  _index?: number
   properties: {
     headers: Record<string, unknown> | null
     delivery_mode: number
