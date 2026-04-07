@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 
 const PAGE_SIZE = 50
 
-type SortKey = "index" | "routing_key" | "payload_bytes"
+type SortKey = "index" | "routing_key" | "payload_bytes" | "timestamp"
 type SortDir = "asc" | "desc"
 
 interface MessageViewerProps {
@@ -37,6 +37,18 @@ function formatBytes(bytes: number): string {
 
 function formatPayload(raw: string): string {
   try { return JSON.stringify(JSON.parse(raw), null, 2) } catch { return raw }
+}
+
+function formatTimestamp(ts: string | undefined): string | null {
+  if (!ts) return null
+  // AMQP timestamp can be a Unix epoch (number as string) or ISO string
+  const n = Number(ts)
+  const date = isNaN(n) ? new Date(ts) : new Date(n < 1e12 ? n * 1000 : n)
+  if (isNaN(date.getTime())) return ts
+  return date.toLocaleString(undefined, {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  })
 }
 
 export function MessageViewer({
@@ -109,11 +121,18 @@ export function MessageViewer({
 
   const messages = pages.get(currentPage) ?? []
 
+  const hasTimestamps = useMemo(() => messages.some((m) => !!m.properties.timestamp), [messages])
+
   const sorted = useMemo(() => {
     return [...messages].sort((a, b) => {
       const mul = sortDir === "asc" ? 1 : -1
       if (sortKey === "index") return mul * ((a._index ?? 0) - (b._index ?? 0))
       if (sortKey === "routing_key") return mul * (a.routing_key || "").localeCompare(b.routing_key || "")
+      if (sortKey === "timestamp") {
+        const ta = Number(a.properties.timestamp ?? 0)
+        const tb = Number(b.properties.timestamp ?? 0)
+        return mul * (ta - tb)
+      }
       return mul * (a.payload_bytes - b.payload_bytes)
     })
   }, [messages, sortKey, sortDir])
@@ -189,6 +208,13 @@ export function MessageViewer({
                         Routing Key <SortIcon active={sortKey === "routing_key"} dir={sortDir} />
                       </button>
                     </TableHead>
+                    {hasTimestamps && (
+                      <TableHead className="w-36">
+                        <button onClick={() => toggleSort("timestamp")} className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+                          Timestamp <SortIcon active={sortKey === "timestamp"} dir={sortDir} />
+                        </button>
+                      </TableHead>
+                    )}
                     <TableHead className="w-20 text-right pr-4">
                       <button onClick={() => toggleSort("payload_bytes")} className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors ml-auto">
                         Size <SortIcon active={sortKey === "payload_bytes"} dir={sortDir} />
@@ -231,6 +257,11 @@ export function MessageViewer({
                       <TableCell className="font-mono text-xs max-w-[160px] truncate">
                         {msg.routing_key || <span className="text-muted-foreground italic">(none)</span>}
                       </TableCell>
+                      {hasTimestamps && (
+                        <TableCell className="text-[11px] text-muted-foreground tabular-nums">
+                          {formatTimestamp(msg.properties.timestamp) ?? <span className="opacity-30">—</span>}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right pr-4 font-mono text-[11px] text-muted-foreground tabular-nums">
                         {formatBytes(msg.payload_bytes)}
                       </TableCell>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { QueueActions } from "./queue-actions"
+import { MessageViewer } from "./message-viewer"
 import { formatRate, cn } from "@/lib/utils"
 import type { Queue } from "@/lib/rabbitmq/types"
 
@@ -21,6 +22,7 @@ export function QueueTable({ initial }: { initial?: Queue[] }) {
   const [stateFilter, setStateFilter] = useState<string>("all")
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  const [viewerQueue, setViewerQueue] = useState<Queue | null>(null)
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -154,9 +156,10 @@ export function QueueTable({ initial }: { initial?: Queue[] }) {
               <TableRow
                 key={`${q.vhost}/${q.name}`}
                 className={cn(
-                  "group transition-colors",
+                  "group transition-colors cursor-pointer",
                   i % 2 === 0 ? "bg-transparent" : "bg-muted/30",
                 )}
+                onClick={() => setViewerQueue(q)}
               >
                 <TableCell className="font-medium text-sm py-2.5">{q.name}</TableCell>
                 <TableCell className="text-right font-mono text-sm tabular-nums py-2.5">
@@ -174,7 +177,7 @@ export function QueueTable({ initial }: { initial?: Queue[] }) {
                     {q.state}
                   </span>
                 </TableCell>
-                <TableCell className="py-2.5">
+                <TableCell className="py-2.5" onClick={(e) => e.stopPropagation()}>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <QueueActions queueName={q.name} vhost={q.vhost} messagesReady={q.messages_ready} messagesUnacked={q.messages_unacknowledged} />
                   </div>
@@ -184,6 +187,17 @@ export function QueueTable({ initial }: { initial?: Queue[] }) {
           </TableBody>
         </Table>
       </div>
+
+      {viewerQueue && (
+        <MessageViewer
+          open={!!viewerQueue}
+          onOpenChange={(o) => { if (!o) setViewerQueue(null) }}
+          queueName={viewerQueue.name}
+          vhost={viewerQueue.vhost}
+          readyCount={viewerQueue.messages_ready}
+          unackedCount={viewerQueue.messages_unacknowledged}
+        />
+      )}
     </div>
   )
 }
