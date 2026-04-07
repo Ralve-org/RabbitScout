@@ -9,7 +9,9 @@ import {
   ArrowUp, ArrowDown, ArrowUpDown, Loader2,
 } from "lucide-react"
 import type { QueueMessage } from "@/lib/rabbitmq/types"
-import { cn } from "@/lib/utils"
+import { cn, formatBytes } from "@/lib/utils"
+
+type IndexedMessage = QueueMessage & { _index: number }
 
 const PEEK_OPTIONS = [1, 10, 25, 50, 100, 250] as const
 type PeekSize = typeof PEEK_OPTIONS[number]
@@ -29,11 +31,6 @@ interface MessageViewerProps {
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <ArrowUpDown className="h-3 w-3 opacity-30" />
   return dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  return `${(bytes / 1024).toFixed(1)} KB`
 }
 
 function formatPayload(raw: string): string {
@@ -60,10 +57,10 @@ export function MessageViewer({
   readyCount,
   unackedCount,
 }: MessageViewerProps) {
-  const [messages, setMessages] = useState<QueueMessage[]>([])
+  const [messages, setMessages] = useState<IndexedMessage[]>([])
   const [peekSize, setPeekSize] = useState<PeekSize>(50)
   const [loading, setLoading] = useState(false)
-  const [selected, setSelected] = useState<QueueMessage | null>(null)
+  const [selected, setSelected] = useState<IndexedMessage | null>(null)
   const [copied, setCopied] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>("index")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -87,7 +84,7 @@ export function MessageViewer({
       const batch: QueueMessage[] = await res.json()
       if (!Array.isArray(batch)) return
 
-      setMessages(batch.map((msg, i) => ({ ...msg, _index: i })))
+      setMessages(batch.map((msg, i): IndexedMessage => ({ ...msg, _index: i })))
     } finally {
       setLoading(false)
     }
@@ -113,7 +110,7 @@ export function MessageViewer({
   const sorted = useMemo(() => {
     return [...messages].sort((a, b) => {
       const mul = sortDir === "asc" ? 1 : -1
-      if (sortKey === "index") return mul * ((a._index ?? 0) - (b._index ?? 0))
+      if (sortKey === "index") return mul * ((a._index) - (b._index))
       if (sortKey === "routing_key") return mul * (a.routing_key || "").localeCompare(b.routing_key || "")
       if (sortKey === "timestamp") {
         const ta = Number(a.properties.timestamp ?? 0)
@@ -233,7 +230,7 @@ export function MessageViewer({
                       onClick={() => setSelected(msg)}
                     >
                       <TableCell className="pl-4 font-mono text-[11px] text-muted-foreground tabular-nums">
-                        {(msg._index ?? 0) + 1}
+                        {(msg._index) + 1}
                       </TableCell>
                       <TableCell className="font-mono text-xs max-w-[160px] truncate">
                         {msg.routing_key || <span className="text-muted-foreground italic">(none)</span>}
