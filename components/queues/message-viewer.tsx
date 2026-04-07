@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
-  InboxIcon, Copy, Check, ChevronLeft, ChevronRight,
+  InboxIcon, Copy, Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   ArrowUp, ArrowDown, ArrowUpDown, Loader2,
 } from "lucide-react"
 import type { QueueMessage } from "@/lib/rabbitmq/types"
@@ -131,8 +131,9 @@ export function MessageViewer({
   }
 
   const highestLoadedPage = Math.max(0, ...Array.from(pages.keys()))
-  const canGoNext = !exhausted || pages.has(currentPage + 1)
   const isLastKnown = currentPage === highestLoadedPage && exhausted
+  // Estimated last page from totalMessages (0-based)
+  const estimatedLastPage = totalMessages > 0 ? Math.ceil(totalMessages / PAGE_SIZE) - 1 : 0
 
   const pageStart = currentPage * PAGE_SIZE + 1
   const pageEnd = currentPage * PAGE_SIZE + messages.length
@@ -253,8 +254,17 @@ export function MessageViewer({
               <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost" size="icon" className="h-7 w-7"
+                  onClick={() => goToPage(0)}
+                  disabled={currentPage === 0 || loading}
+                  title="First page"
+                >
+                  <ChevronsLeft className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost" size="icon" className="h-7 w-7"
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 0 || loading}
+                  title="Previous page"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
@@ -265,8 +275,17 @@ export function MessageViewer({
                   variant="ghost" size="icon" className="h-7 w-7"
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={isLastKnown || loading}
+                  title="Next page"
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost" size="icon" className="h-7 w-7"
+                  onClick={() => goToPage(estimatedLastPage)}
+                  disabled={isLastKnown || loading}
+                  title="Last page"
+                >
+                  <ChevronsRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
