@@ -163,13 +163,13 @@ export function QueueTable({ initial }: { initial?: Queue[] }) {
               >
                 <TableCell className="font-medium text-sm py-2.5">{q.name}</TableCell>
                 <TableCell className="text-right font-mono text-sm tabular-nums py-2.5">
-                  {q.messages.toLocaleString()}
+                  {q.messages.toLocaleString("en")}
                   {q.message_stats?.publish_details?.rate ? (
                     <span className="ml-1.5 text-[11px] text-muted-foreground">{formatRate(q.message_stats.publish_details.rate)}</span>
                   ) : null}
                 </TableCell>
-                <TableCell className="text-right font-mono text-sm tabular-nums py-2.5">{q.messages_ready.toLocaleString()}</TableCell>
-                <TableCell className="text-right font-mono text-sm tabular-nums py-2.5">{q.messages_unacknowledged.toLocaleString()}</TableCell>
+                <TableCell className="text-right font-mono text-sm tabular-nums py-2.5">{q.messages_ready.toLocaleString("en")}</TableCell>
+                <TableCell className="text-right font-mono text-sm tabular-nums py-2.5">{q.messages_unacknowledged.toLocaleString("en")}</TableCell>
                 <TableCell className="text-right font-mono text-sm tabular-nums py-2.5">{q.consumers}</TableCell>
                 <TableCell className="py-2.5">
                   <span className="inline-flex items-center gap-1.5 text-sm">

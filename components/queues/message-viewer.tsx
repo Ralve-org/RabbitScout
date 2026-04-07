@@ -5,13 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
-  InboxIcon, Copy, Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  InboxIcon, Copy, Check,
   ArrowUp, ArrowDown, ArrowUpDown, Loader2,
 } from "lucide-react"
 import type { QueueMessage } from "@/lib/rabbitmq/types"
 import { cn } from "@/lib/utils"
 
-const PAGE_SIZE = 50
+const PEEK_OPTIONS = [1, 10, 25, 50, 100, 250] as const
+type PeekSize = typeof PEEK_OPTIONS[number]
 
 type SortKey = "index" | "routing_key" | "payload_bytes" | "timestamp"
 type SortDir = "asc" | "desc"
@@ -59,11 +60,9 @@ export function MessageViewer({
   readyCount,
   unackedCount,
 }: MessageViewerProps) {
-  // pages is a map: pageIndex (0-based) → messages for that page
-  const [pages, setPages] = useState<Map<number, QueueMessage[]>>(new Map())
-  const [currentPage, setCurrentPage] = useState(0)
+  const [messages, setMessages] = useState<QueueMessage[]>([])
+  const [peekSize, setPeekSize] = useState<PeekSize>(50)
   const [loading, setLoading] = useState(false)
-  const [exhausted, setExhausted] = useState(false)
   const [selected, setSelected] = useState<QueueMessage | null>(null)
   const [copied, setCopied] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>("index")
@@ -71,55 +70,43 @@ export function MessageViewer({
 
   const totalMessages = readyCount + unackedCount
 
-  const fetchPage = useCallback(async (pageIndex: number) => {
+  const fetchMessages = useCallback(async (count: PeekSize) => {
     setLoading(true)
+    setSelected(null)
     try {
       const res = await fetch(
         `/api/rabbitmq/queues/${encodeURIComponent(vhost)}/${encodeURIComponent(queueName)}/get`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ count: PAGE_SIZE, ackmode: "ack_requeue_true", encoding: "auto" }),
+          body: JSON.stringify({ count, ackmode: "ack_requeue_true", encoding: "auto" }),
         },
       )
       if (!res.ok) return
 
       const batch: QueueMessage[] = await res.json()
-      if (!Array.isArray(batch) || batch.length === 0) {
-        setExhausted(true)
-        return
-      }
+      if (!Array.isArray(batch)) return
 
-      // Stamp with global index based on page
-      const stamped = batch.map((msg, i) => ({ ...msg, _index: pageIndex * PAGE_SIZE + i }))
-
-      setPages((prev) => new Map(prev).set(pageIndex, stamped))
-
-      if (batch.length < PAGE_SIZE) setExhausted(true)
+      setMessages(batch.map((msg, i) => ({ ...msg, _index: i })))
     } finally {
       setLoading(false)
     }
   }, [vhost, queueName])
 
-  // Reset and load first page when dialog opens
+  // Reset and load when dialog opens
   useEffect(() => {
     if (!open) return
-    setPages(new Map())
-    setCurrentPage(0)
-    setExhausted(false)
+    setMessages([])
     setSelected(null)
-    fetchPage(0)
+    setPeekSize(50)
+    fetchMessages(50)
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const goToPage = async (pageIndex: number) => {
-    setSelected(null)
-    setCurrentPage(pageIndex)
-    if (!pages.has(pageIndex)) {
-      await fetchPage(pageIndex)
-    }
+  const handlePeekSizeChange = (size: PeekSize) => {
+    setPeekSize(size)
+    setMessages([])
+    fetchMessages(size)
   }
-
-  const messages = pages.get(currentPage) ?? []
 
   const hasTimestamps = useMemo(() => messages.some((m) => !!m.properties.timestamp), [messages])
 
@@ -149,14 +136,6 @@ export function MessageViewer({
     setTimeout(() => setCopied(false), 1500)
   }
 
-  const highestLoadedPage = Math.max(0, ...Array.from(pages.keys()))
-  const isLastKnown = currentPage === highestLoadedPage && exhausted
-  // Estimated last page from totalMessages (0-based)
-  const estimatedLastPage = totalMessages > 0 ? Math.ceil(totalMessages / PAGE_SIZE) - 1 : 0
-
-  const pageStart = currentPage * PAGE_SIZE + 1
-  const pageEnd = currentPage * PAGE_SIZE + messages.length
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[92vw] h-[88vh] flex flex-col p-0 gap-0">
@@ -169,20 +148,22 @@ export function MessageViewer({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {totalMessages === 0
                   ? "Queue is empty"
-                  : `~${totalMessages.toLocaleString()} messages · 50 per page`}
+                  : messages.length > 0
+                    ? `Peeking at the first ${messages.length} messages from the head of the queue`
+                    : `~${totalMessages.toLocaleString("en")} messages total`}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {readyCount > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] text-muted-foreground">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
-                  {readyCount.toLocaleString()} ready
+                  {readyCount.toLocaleString("en")} ready
                 </span>
               )}
               {unackedCount > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] text-muted-foreground">
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />
-                  {unackedCount.toLocaleString()} unacked
+                  {unackedCount.toLocaleString("en")} unacked
                 </span>
               )}
             </div>
@@ -276,48 +257,29 @@ export function MessageViewer({
               </Table>
             </div>
 
-            {/* Pagination bar */}
+            {/* Status bar */}
             <div className="flex items-center justify-between border-t px-3 py-2 shrink-0 bg-background">
               <span className="text-[11px] text-muted-foreground tabular-nums">
-                {messages.length > 0 ? `${pageStart}–${pageEnd}` : "—"}
+                {messages.length > 0 ? `${messages.length} message${messages.length !== 1 ? "s" : ""}` : "—"}
                 {loading && <Loader2 className="h-3 w-3 animate-spin inline ml-1.5 opacity-50" />}
               </span>
-              <div className="flex items-center gap-0.5">
-                <Button
-                  variant="ghost" size="icon" className="h-7 w-7"
-                  onClick={() => goToPage(0)}
-                  disabled={currentPage === 0 || loading}
-                  title="First page"
-                >
-                  <ChevronsLeft className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost" size="icon" className="h-7 w-7"
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 0 || loading}
-                  title="Previous page"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                </Button>
-                <span className="text-[11px] text-muted-foreground tabular-nums px-1.5 min-w-[2rem] text-center">
-                  {currentPage + 1}
-                </span>
-                <Button
-                  variant="ghost" size="icon" className="h-7 w-7"
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={isLastKnown || loading}
-                  title="Next page"
-                >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost" size="icon" className="h-7 w-7"
-                  onClick={() => goToPage(estimatedLastPage)}
-                  disabled={isLastKnown || loading}
-                  title="Last page"
-                >
-                  <ChevronsRight className="h-3.5 w-3.5" />
-                </Button>
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] text-muted-foreground mr-1">Peek:</span>
+                {PEEK_OPTIONS.map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => handlePeekSizeChange(n)}
+                    disabled={loading}
+                    className={cn(
+                      "h-6 min-w-[2rem] px-1.5 rounded text-[11px] tabular-nums transition-colors",
+                      peekSize === n
+                        ? "bg-muted text-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
