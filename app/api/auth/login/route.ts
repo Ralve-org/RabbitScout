@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const credentials = Buffer.from(`${username}:${password}`).toString('base64')
-    setSessionCookie(credentials, user)
+    await setSessionCookie(credentials, user)
 
     return NextResponse.json({ authenticated: true, user })
   } catch (err) {

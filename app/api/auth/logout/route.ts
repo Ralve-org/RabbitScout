@@ -2,6 +2,6 @@ import { NextResponse } from 'next/server'
 import { clearSessionCookie } from '@/lib/auth/session'
 
 export async function POST() {
-  clearSessionCookie()
+  await clearSessionCookie()
   return NextResponse.json({ success: true })
 }

@@ -6,10 +6,10 @@ const COOKIE_NAME = 'rmq-session'
 /**
  * Set the auth session cookie (server-side only).
  */
-export function setSessionCookie(credentials: string, user: RabbitMQUser): void {
+export async function setSessionCookie(credentials: string, user: RabbitMQUser): Promise<void> {
   const session: AuthSession = { credentials, user }
-
-  cookies().set(COOKIE_NAME, JSON.stringify(session), {
+  const cookieStore = await cookies()
+  cookieStore.set(COOKIE_NAME, JSON.stringify(session), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -21,16 +21,18 @@ export function setSessionCookie(credentials: string, user: RabbitMQUser): void 
 /**
  * Clear the auth session cookie (server-side only).
  */
-export function clearSessionCookie(): void {
-  cookies().delete(COOKIE_NAME)
+export async function clearSessionCookie(): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.delete(COOKIE_NAME)
 }
 
 /**
  * Read the auth session from the cookie (server-side only).
  */
-export function getSessionFromCookie(): AuthSession | null {
+export async function getSessionFromCookie(): Promise<AuthSession | null> {
   try {
-    const cookie = cookies().get(COOKIE_NAME)
+    const cookieStore = await cookies()
+    const cookie = cookieStore.get(COOKIE_NAME)
     if (!cookie?.value) return null
     return JSON.parse(cookie.value) as AuthSession
   } catch {

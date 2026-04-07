@@ -17,7 +17,7 @@ function getCredentials(request: NextRequest): string | null {
 
 async function proxyToRabbitMQ(
   request: NextRequest,
-  params: { path: string[] },
+  params: Promise<{ path: string[] }>,
   method: string,
 ) {
   const credentials = getCredentials(request)
@@ -27,7 +27,8 @@ async function proxyToRabbitMQ(
 
   // Re-encode each segment: Next.js decodes %2F → / in params,
   // but RabbitMQ requires vhost "/" to stay encoded as %2F in the URL.
-  const path = params.path.map((s) => encodeURIComponent(s)).join('/')
+  const { path: pathSegments } = await params
+  const path = pathSegments.map((s) => encodeURIComponent(s)).join('/')
   const url = `${getRabbitMQBaseUrl()}/api/${path}`
 
   const fetchOptions: RequestInit = {
@@ -79,18 +80,18 @@ async function proxyToRabbitMQ(
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   return proxyToRabbitMQ(req, params, 'GET')
 }
 
-export async function POST(req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   return proxyToRabbitMQ(req, params, 'POST')
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   return proxyToRabbitMQ(req, params, 'PUT')
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   return proxyToRabbitMQ(req, params, 'DELETE')
 }

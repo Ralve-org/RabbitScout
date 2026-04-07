@@ -7,9 +7,10 @@ import type { AuthSession } from './types'
  * Read the current user's RabbitMQ credentials from the httpOnly session cookie.
  * Only works in Server Components and API routes (server-side).
  */
-export function getSession(): AuthSession | null {
+export async function getSession(): Promise<AuthSession | null> {
   try {
-    const cookie = cookies().get('rmq-session')
+    const cookieStore = await cookies()
+    const cookie = cookieStore.get('rmq-session')
     if (!cookie?.value) return null
     return JSON.parse(cookie.value) as AuthSession
   } catch {
@@ -25,7 +26,7 @@ export async function rabbitmqFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const session = getSession()
+  const session = await getSession()
   if (!session) {
     throw new RabbitMQError(401, 'Not authenticated', 'AUTH')
   }
