@@ -24,9 +24,11 @@ interface UsePollingResult<T> {
  *
  * - Cadence follows the user's global refresh preference unless overridden
  * - Pauses automatically while the tab is hidden, refreshes on return
- * - Aborts in-flight requests on unmount and between navigations
+ * - Skips ticks while a request is still in flight (no self-abort churn)
+ * - Resets state when the target URL changes, so one target's payload is
+ *   never rendered under another target's identity
  * - Feeds the header's broker-status indicator
- * - On auth expiry (401) redirects to the login page
+ * - On auth expiry (401) clears the session and returns to the login page
  */
 export function usePolling<T>(url: string | null, options: UsePollingOptions = {}): UsePollingResult<T> {
   const router = useRouter()
@@ -43,16 +45,30 @@ export function usePolling<T>(url: string | null, options: UsePollingOptions = {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
+  const inFlightRef = useRef(false)
   const urlRef = useRef(url)
+  const redirectingRef = useRef(false)
+
+  // React to target changes during render (React's derive-state pattern):
+  // clear the previous target's payload immediately so consumers never
+  // show stale rows under a new identity.
+  const [prevUrl, setPrevUrl] = useState<string | null>(url)
+  if (url !== prevUrl) {
+    setPrevUrl(url)
+    setData(null)
+    setError(null)
+    setLastUpdated(null)
+    setLoading(Boolean(url && enabled))
+  }
 
   // Idle (no target): report not-loading without an effect
   if ((!enabled || !url) && loading) setLoading(false)
 
   const fetchOnce = useCallback(async () => {
     const target = urlRef.current
-    if (!target) return
+    if (!target || inFlightRef.current || redirectingRef.current) return
 
-    abortRef.current?.abort()
+    inFlightRef.current = true
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -61,7 +77,13 @@ export function usePolling<T>(url: string | null, options: UsePollingOptions = {
       if (controller.signal.aborted) return
 
       if (res.status === 401) {
-        router.push("/login")
+        // Session expired. Clear the dead cookie first — otherwise the
+        // auth gate sees a cookie and bounces /login straight back.
+        redirectingRef.current = true
+        setError("Session expired")
+        fetch("/api/auth/logout", { method: "POST" })
+          .catch(() => {})
+          .finally(() => router.push("/login"))
         return
       }
 
@@ -89,6 +111,7 @@ export function usePolling<T>(url: string | null, options: UsePollingOptions = {
       setError("Unable to reach the server")
       reportError()
     } finally {
+      inFlightRef.current = false
       if (!controller.signal.aborted) setLoading(false)
     }
   }, [router, reportSuccess, reportError])
@@ -97,13 +120,16 @@ export function usePolling<T>(url: string | null, options: UsePollingOptions = {
     urlRef.current = url
     if (!enabled || !url) return
 
-    fetchOnce()
+    // Initial fetch is scheduled, not run in the effect body — state
+    // updates then always happen from task callbacks.
+    const kickoff = setTimeout(fetchOnce, 0)
 
-    if (interval <= 0) return
-
-    let id: ReturnType<typeof setInterval> | null = setInterval(() => {
-      if (!document.hidden) fetchOnce()
-    }, interval)
+    let id: ReturnType<typeof setInterval> | null = null
+    if (interval > 0) {
+      id = setInterval(() => {
+        if (!document.hidden) fetchOnce()
+      }, interval)
+    }
 
     // Refresh immediately when the tab becomes visible again
     const onVisible = () => {
@@ -112,10 +138,11 @@ export function usePolling<T>(url: string | null, options: UsePollingOptions = {
     document.addEventListener("visibilitychange", onVisible)
 
     return () => {
+      clearTimeout(kickoff)
       if (id) clearInterval(id)
-      id = null
       document.removeEventListener("visibilitychange", onVisible)
       abortRef.current?.abort()
+      inFlightRef.current = false
     }
   }, [url, interval, enabled, fetchOnce])
 

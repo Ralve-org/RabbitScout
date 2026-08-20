@@ -25,7 +25,10 @@ import {
 import {
   DensityToggle,
   EmptyState,
+  Pagination,
   SortButton,
+  StaleDataBanner,
+  usePagination,
   useRowPadding,
   useSort,
 } from "@/components/shared/table-utils"
@@ -51,7 +54,7 @@ export function connectionDisplayName(c: Connection): string | null {
 export function ConnectionTable() {
   const vhost = usePreferences((s) => s.vhost)
   const { toast } = useToast()
-  const { data, error, loading, refresh } = usePolling<Connection[]>("/api/rabbitmq/connections")
+  const { data, error, loading, lastUpdated, refresh } = usePolling<Connection[]>("/api/rabbitmq/connections")
 
   const [search, setSearch] = React.useState("")
   const { sortKey, sortDir, toggle, compare } = useSort<SortKey>("name")
@@ -81,6 +84,8 @@ export function ConnectionTable() {
     }
     return [...out].sort((a, b) => compare(a[sortKey], b[sortKey]))
   }, [list, search, sortKey, compare])
+
+  const { page, setPage, pageCount, paged } = usePagination(filtered)
 
   const handleClose = async () => {
     if (!closeTarget) return
@@ -112,6 +117,7 @@ export function ConnectionTable() {
 
   return (
     <div className="space-y-3">
+      {error && data && <StaleDataBanner error={error} lastUpdated={lastUpdated} onRetry={refresh} />}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative max-w-xs flex-1">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -172,7 +178,7 @@ export function ConnectionTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((conn) => {
+              paged.map((conn) => {
                 const displayName = connectionDisplayName(conn)
                 return (
                   <TableRow
@@ -234,6 +240,8 @@ export function ConnectionTable() {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPage={setPage} />
 
       <ConnectionDrawer
         connection={selected}

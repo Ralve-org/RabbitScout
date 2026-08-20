@@ -49,9 +49,20 @@ function LoginForm() {
 
       if (data.authenticated && data.user) {
         setAuth(data.user)
-        // Return to the page the user originally asked for
+        // Return to the page the user originally asked for — resolved
+        // against our own origin so ?next= can never leave the app
+        // (URL parsing also neutralizes backslash normalization tricks).
+        let dest = "/"
         const next = searchParams.get("next")
-        router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/")
+        if (next) {
+          try {
+            const u = new URL(next, window.location.origin)
+            if (u.origin === window.location.origin) dest = u.pathname + u.search + u.hash
+          } catch {
+            // Malformed — fall back to the dashboard
+          }
+        }
+        router.push(dest)
         router.refresh()
       } else {
         setError("Invalid response from server")

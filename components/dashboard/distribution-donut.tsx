@@ -6,6 +6,8 @@ import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
 
 interface DataPoint {
+  /** Stable identity (vhost-qualified) so segments key correctly. */
+  id: string
   name: string
   value: number
 }
@@ -77,7 +79,7 @@ export function DistributionDonut({ data }: { data: DataPoint[] }) {
             const isDimmed = active !== null && !isActive
             return (
               <motion.circle
-                key={seg.name}
+                key={seg.id}
                 cx={SIZE / 2}
                 cy={SIZE / 2}
                 r={R}
@@ -110,7 +112,7 @@ export function DistributionDonut({ data }: { data: DataPoint[] }) {
       <div className="w-full min-w-0 space-y-1 lg:w-auto lg:flex-1">
         {segments.map((seg) => (
           <button
-            key={seg.name}
+            key={seg.id}
             onMouseEnter={() => setActive(seg.i)}
             onMouseLeave={() => setActive(null)}
             className={cn(

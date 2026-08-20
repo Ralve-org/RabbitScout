@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
+import { useCommandState } from "cmdk"
 import {
   ArrowRightLeft,
   Cable,
@@ -33,30 +34,76 @@ interface CommandMenuProps {
 }
 
 /**
+ * Renders queue results filtered against the palette query BEFORE
+ * truncating, so any queue on the broker is reachable by typing its
+ * name — not just the first 50 of the raw list.
+ */
+function QueueResults({
+  queues,
+  onSelect,
+}: {
+  queues: Queue[]
+  onSelect: (q: Queue) => void
+}) {
+  const search = useCommandState((s) => s.search)
+
+  const matches = React.useMemo(() => {
+    if (!search) return queues.slice(0, 20)
+    const q = search.toLowerCase()
+    return queues.filter((x) => x.name.toLowerCase().includes(q)).slice(0, 50)
+  }, [queues, search])
+
+  if (matches.length === 0) return null
+  return (
+    <>
+      <CommandSeparator />
+      <CommandGroup heading="Queues">
+        {matches.map((q) => (
+          <CommandItem
+            key={`${q.vhost}/${q.name}`}
+            value={`queue ${q.vhost} ${q.name}`}
+            onSelect={() => onSelect(q)}
+          >
+            <Layers />
+            <span className="truncate">{q.name}</span>
+            <span className="ml-auto shrink-0 font-mono text-xs text-muted-foreground tnum">
+              {(q.messages ?? 0).toLocaleString()}
+            </span>
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    </>
+  )
+}
+
+/**
  * ⌘K palette: page navigation, fuzzy jump-to-queue, and quick actions.
- * Queues are fetched lazily the first time the palette opens.
+ * The queue list refreshes each time the palette opens (stale results
+ * stay rendered while the refetch is in flight).
  */
 export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const router = useRouter()
   const { setTheme, resolvedTheme } = useTheme()
-  const { refreshInterval, setRefreshInterval } = usePreferences()
+  const { refreshInterval, setRefreshInterval, setVhost } = usePreferences()
   const [queues, setQueues] = React.useState<Queue[] | null>(null)
 
   React.useEffect(() => {
-    if (!open || queues !== null) return
+    if (!open) return
     let cancelled = false
     fetch("/api/rabbitmq/queues")
-      .then((r) => (r.ok ? r.json() : []))
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!cancelled) setQueues(Array.isArray(data) ? data : [])
+        if (cancelled) return
+        if (Array.isArray(data)) setQueues(data)
+        else setQueues((prev) => prev ?? [])
       })
       .catch(() => {
-        if (!cancelled) setQueues([])
+        if (!cancelled) setQueues((prev) => prev ?? [])
       })
     return () => {
       cancelled = true
     }
-  }, [open, queues])
+  }, [open])
 
   const run = React.useCallback(
     (fn: () => void) => {
@@ -115,30 +162,16 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
         </CommandGroup>
 
         {queues && queues.length > 0 && (
-          <>
-            <CommandSeparator />
-            <CommandGroup heading="Queues">
-              {queues.slice(0, 50).map((q) => (
-                <CommandItem
-                  key={`${q.vhost}/${q.name}`}
-                  value={`queue ${q.name}`}
-                  onSelect={() =>
-                    run(() =>
-                      router.push(
-                        `/queues?q=${encodeURIComponent(q.name)}`,
-                      ),
-                    )
-                  }
-                >
-                  <Layers />
-                  <span className="truncate">{q.name}</span>
-                  <span className="ml-auto font-mono text-xs text-muted-foreground tnum">
-                    {q.messages.toLocaleString()}
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </>
+          <QueueResults
+            queues={queues}
+            onSelect={(q) =>
+              run(() => {
+                // Align the global scope so the jumped-to queue is visible
+                setVhost(q.vhost)
+                router.push(`/queues?q=${encodeURIComponent(q.name)}`)
+              })
+            }
+          />
         )}
       </CommandList>
     </CommandDialog>

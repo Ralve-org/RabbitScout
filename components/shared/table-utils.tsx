@@ -1,7 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { ArrowDown, ArrowUp, ArrowUpDown, Rows3, Rows4, type LucideIcon } from "lucide-react"
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  RefreshCw,
+  Rows3,
+  Rows4,
+  type LucideIcon,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { usePreferences } from "@/lib/stores/preferences"
@@ -10,18 +19,17 @@ import { cn } from "@/lib/utils"
 // ── Sorting ────────────────────────────────────────────────────
 
 export function useSort<K extends string>(initialKey: K, initialDir: "asc" | "desc" = "asc") {
-  const [sortKey, setSortKey] = React.useState<K>(initialKey)
-  const [sortDir, setSortDir] = React.useState<"asc" | "desc">(initialDir)
+  // Key and direction live in one state so toggling stays a pure update
+  const [sort, setSort] = React.useState<{ key: K; dir: "asc" | "desc" }>({
+    key: initialKey,
+    dir: initialDir,
+  })
+  const { key: sortKey, dir: sortDir } = sort
 
   const toggle = React.useCallback((key: K) => {
-    setSortKey((prev) => {
-      if (prev === key) {
-        setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-        return prev
-      }
-      setSortDir("asc")
-      return key
-    })
+    setSort((s) =>
+      s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" },
+    )
   }, [])
 
   const compare = React.useCallback(
@@ -96,6 +104,41 @@ export function DensityToggle() {
 export function useRowPadding() {
   const density = usePreferences((s) => s.density)
   return density === "compact" ? "py-1.5" : "py-2.5"
+}
+
+// ── Stale data banner ──────────────────────────────────────────
+
+/**
+ * Shown above a table when polling fails but previous data is still on
+ * screen — stale rows must never masquerade as live ones silently.
+ */
+export function StaleDataBanner({
+  error,
+  lastUpdated,
+  onRetry,
+}: {
+  error: string | null
+  lastUpdated: number | null
+  onRetry: () => void
+}) {
+  if (!error) return null
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+      <span className="min-w-0 truncate">
+        Live data unavailable ({error})
+        {lastUpdated && ` — showing data from ${new Date(lastUpdated).toLocaleTimeString()}`}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="ml-auto h-6 shrink-0 gap-1 px-2 text-xs text-warning hover:text-warning"
+        onClick={onRetry}
+      >
+        <RefreshCw className="h-3 w-3" /> Retry
+      </Button>
+    </div>
+  )
 }
 
 // ── Empty state ────────────────────────────────────────────────

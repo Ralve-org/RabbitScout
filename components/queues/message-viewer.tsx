@@ -99,9 +99,15 @@ function MessageViewerInner({
   const [copied, setCopied] = React.useState(false)
   const { sortKey, sortDir, toggle, compare } = useSort<SortKey>("_index")
 
-  // Loads messages; all state updates happen after the fetch resolves.
+  // Monotonic request token: a newer load invalidates every state update
+  // from older in-flight requests (initial load vs manual refetch races).
+  const reqSeqRef = React.useRef(0)
+
+  // Loads messages; all state updates happen after the fetch resolves
+  // and only if this request is still the latest.
   const load = React.useCallback(
     async (count: number) => {
+      const seq = ++reqSeqRef.current
       try {
         const res = await fetch(
           `/api/rabbitmq/queues/${encodeURIComponent(vhost)}/${encodeURIComponent(queueName)}/get`,
@@ -111,22 +117,27 @@ function MessageViewerInner({
             body: JSON.stringify({ count, ackmode: "ack_requeue_true", encoding: "auto" }),
           },
         )
+        if (seq !== reqSeqRef.current) return
         if (!res.ok) {
           const body = await res.json().catch(() => null)
+          if (seq !== reqSeqRef.current) return
           setError(body?.details || body?.error || `Failed to fetch messages (${res.status})`)
           setMessages([])
+          setLoading(false)
           return
         }
         const data = await res.json()
+        if (seq !== reqSeqRef.current) return
         const list: IndexedMessage[] = (Array.isArray(data) ? data : []).map(
           (m: QueueMessage, i: number) => ({ ...m, _index: i + 1 }),
         )
         setMessages(list)
         setSelected(list.length > 0 ? list[0] : null)
         setError(null)
+        setLoading(false)
       } catch {
+        if (seq !== reqSeqRef.current) return
         setError("Network error — could not reach the server")
-      } finally {
         setLoading(false)
       }
     },
@@ -145,46 +156,14 @@ function MessageViewerInner({
   )
 
   React.useEffect(() => {
-    let ignore = false
-    async function initialLoad() {
-      try {
-        const res = await fetch(
-          `/api/rabbitmq/queues/${encodeURIComponent(vhost)}/${encodeURIComponent(queueName)}/get`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ count: 50, ackmode: "ack_requeue_true", encoding: "auto" }),
-          },
-        )
-        if (ignore) return
-        if (!res.ok) {
-          const body = await res.json().catch(() => null)
-          if (!ignore) {
-            setError(body?.details || body?.error || `Failed to fetch messages (${res.status})`)
-            setLoading(false)
-          }
-          return
-        }
-        const data = await res.json()
-        if (ignore) return
-        const list: IndexedMessage[] = (Array.isArray(data) ? data : []).map(
-          (m: QueueMessage, i: number) => ({ ...m, _index: i + 1 }),
-        )
-        setMessages(list)
-        setSelected(list.length > 0 ? list[0] : null)
-        setLoading(false)
-      } catch {
-        if (!ignore) {
-          setError("Network error — could not reach the server")
-          setLoading(false)
-        }
-      }
-    }
-    initialLoad()
+    const seqRef = reqSeqRef
+    const kickoff = setTimeout(() => void load(50), 0)
     return () => {
-      ignore = true
+      clearTimeout(kickoff)
+      // Invalidate any in-flight request on unmount / queue change
+      seqRef.current++
     }
-  }, [vhost, queueName])
+  }, [load])
 
   const sorted = React.useMemo(
     () => [...messages].sort((a, b) => compare(a[sortKey], b[sortKey])),

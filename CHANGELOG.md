@@ -7,7 +7,7 @@ A ground-up modernization: new framework generation, a redesigned interface, ful
 ### Fixed
 
 - **Login on RabbitMQ 3.9+ / 4.x reported `isAdmin: false` with empty tags** (#23). `whoami` tags have been returned as a JSON array since RabbitMQ 3.9; they were only parsed as a comma-separated string. Both formats are now handled, so admin-gated UI works on every supported broker.
-- **Auth "did nothing" on plain-HTTP production deployments** (#19). The session cookie was always stamped `Secure` in production, so browsers silently dropped it over HTTP. The `Secure` attribute is now derived from the actual request (`x-forwarded-proto` aware), with an optional `COOKIE_SECURE` override.
+- **Auth "did nothing" on plain-HTTP production deployments** (#19). The session cookie was always stamped `Secure` in production, so browsers silently dropped it over HTTP. The `Secure` attribute is now derived from the actual request (`x-forwarded-proto` aware), with an optional `COOKIE_SECURE` override. Thanks to @arthurfiorette, whose PR #22 pinpointed the same root cause.
 - **Client-provided connection names were ignored** (#20). Connections now display `user_provided_name` / `client_properties.connection_name` as their primary label, with host:port as the secondary line — matching the official management UI.
 - **Dashboard charts were locked to a ~90s live window** (#21). A time-range selector (Live / 10m / 1h / 8h / 24h) now pulls historical samples from the broker's own retention policies.
 - Publishing to the **default exchange** silently failed to route: the management API expects `amq.default` in the URL, not an empty segment.
@@ -27,7 +27,7 @@ A ground-up modernization: new framework generation, a redesigned interface, ful
 - Queue management: create (classic / quorum / stream), delete with type-to-confirm, purge with confirmation.
 - Queue detail drawer: live counts, 10-minute rate history, consumers with activity state, arguments.
 - Exchange management: declare, delete, inspect bindings, and add bindings to queues.
-- Message viewer v2: server-driven peeking (10–250), sorting, timestamp column, meta chips, copy and download payloads, redelivered badges.
+- Message viewer v2: server-driven peeking (10–250), sorting, timestamp column, meta chips, copy and download payloads, redelivered badges. (@CodeMarco05's PR #18 explored on-demand peeking first — the idea carried into this rewrite.)
 - Publish dialog v2: custom headers editor, delivery mode, works from queues and exchanges.
 - Connection detail drawer with client properties and TLS info.
 - Command palette (`Ctrl/⌘ K`): page navigation, fuzzy jump-to-queue, theme and polling actions.

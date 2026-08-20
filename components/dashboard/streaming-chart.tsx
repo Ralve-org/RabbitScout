@@ -33,12 +33,20 @@ export function StreamingChart({ data, series, yAxisFormat }: StreamingChartProp
   const chartRef = useRef<uPlot | null>(null)
   const { theme } = useTheme()
 
+  // Formatter lives in a ref so its identity never rebuilds the chart —
+  // call sites pass inline arrows, and destroying uPlot every poll tick
+  // would kill the hover cursor mid-interaction.
+  const fmtRef = useRef(yAxisFormat)
+  useEffect(() => {
+    fmtRef.current = yAxisFormat
+  }, [yAxisFormat])
+
   const buildOpts = useCallback(
     (width: number, height: number): uPlot.Options => {
       const textColor = cssVar("--muted-foreground")
       const gridColor = cssVar("--border")
 
-      const fmt = (v: number) => (yAxisFormat ? yAxisFormat(v) : String(v))
+      const fmt = (v: number) => (fmtRef.current ? fmtRef.current(v) : String(v))
 
       return {
         width,
@@ -115,42 +123,53 @@ export function StreamingChart({ data, series, yAxisFormat }: StreamingChartProp
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- theme triggers color recalculation
-    [series, yAxisFormat, theme],
+    [series, theme],
   )
 
-  // Create / destroy chart, and resize to fill container
+  const dataRef = useRef(data)
+  useEffect(() => {
+    dataRef.current = data
+  }, [data])
+
+  // Create / destroy chart, and resize to fill container.
+  // Creation is deferred one frame so a theme switch has already applied
+  // the html class before cssVar() reads the palette.
   useEffect(() => {
     if (!containerRef.current) return
 
     const el = containerRef.current
-    const w = el.clientWidth
-    const h = el.clientHeight || 200
+    let ro: ResizeObserver | null = null
 
-    if (chartRef.current) {
-      chartRef.current.destroy()
-      chartRef.current = null
-    }
+    const raf = requestAnimationFrame(() => {
+      const w = el.clientWidth
+      const h = el.clientHeight || 200
 
-    const chart = new uPlot(buildOpts(w, h), data, el)
-    chartRef.current = chart
-
-    // Tooltip element lives inside the plotting area
-    if (tooltipRef.current) chart.over.appendChild(tooltipRef.current)
-
-    const ro = new ResizeObserver((entries) => {
-      const rect = entries[0]?.contentRect
-      if (rect && chartRef.current) {
-        chartRef.current.setSize({ width: rect.width, height: rect.height || 200 })
+      if (chartRef.current) {
+        chartRef.current.destroy()
+        chartRef.current = null
       }
+
+      const chart = new uPlot(buildOpts(w, h), dataRef.current, el)
+      chartRef.current = chart
+
+      // Tooltip element lives inside the plotting area
+      if (tooltipRef.current) chart.over.appendChild(tooltipRef.current)
+
+      ro = new ResizeObserver((entries) => {
+        const rect = entries[0]?.contentRect
+        if (rect && chartRef.current) {
+          chartRef.current.setSize({ width: rect.width, height: rect.height || 200 })
+        }
+      })
+      ro.observe(el)
     })
-    ro.observe(el)
 
     return () => {
-      ro.disconnect()
-      chart.destroy()
+      cancelAnimationFrame(raf)
+      ro?.disconnect()
+      chartRef.current?.destroy()
       chartRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, buildOpts])
 
   // Update data without recreating the chart

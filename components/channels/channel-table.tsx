@@ -31,7 +31,10 @@ import {
 import {
   DensityToggle,
   EmptyState,
+  Pagination,
   SortButton,
+  StaleDataBanner,
+  usePagination,
   useRowPadding,
   useSort,
 } from "@/components/shared/table-utils"
@@ -53,7 +56,7 @@ type SortKey =
 export function ChannelTable() {
   const vhost = usePreferences((s) => s.vhost)
   const { toast } = useToast()
-  const { data, error, loading, refresh } = usePolling<Channel[]>("/api/rabbitmq/channels")
+  const { data, error, loading, lastUpdated, refresh } = usePolling<Channel[]>("/api/rabbitmq/channels")
 
   const [search, setSearch] = React.useState("")
   const { sortKey, sortDir, toggle, compare } = useSort<SortKey>("name")
@@ -81,6 +84,8 @@ export function ChannelTable() {
     }
     return [...out].sort((a, b) => compare(a[sortKey], b[sortKey]))
   }, [list, search, sortKey, compare])
+
+  const { page, setPage, pageCount, paged } = usePagination(filtered)
 
   const handleClose = async () => {
     if (!closeTarget) return
@@ -114,6 +119,7 @@ export function ChannelTable() {
 
   return (
     <div className="space-y-3">
+      {error && data && <StaleDataBanner error={error} lastUpdated={lastUpdated} onRetry={refresh} />}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative max-w-xs flex-1">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -180,7 +186,7 @@ export function ChannelTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((ch) => (
+              paged.map((ch) => (
                 <TableRow key={ch.name}>
                   <TableCell className={rowPad}>
                     <div className="font-mono text-[13px] font-medium">#{ch.number}</div>
@@ -253,6 +259,8 @@ export function ChannelTable() {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPage={setPage} />
 
       {/* Close confirmation */}
       <Dialog open={!!closeTarget} onOpenChange={(open) => !open && setCloseTarget(null)}>

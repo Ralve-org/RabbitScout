@@ -13,55 +13,9 @@ import { ErrorCard } from "@/components/shared/error-card"
 import { AnimatedValue } from "@/components/shared/animated-value"
 import { usePolling } from "@/hooks/use-polling"
 import { useLiveSeries } from "@/hooks/use-live-series"
+import { ratesFromSamples, gaugeFromSamples, pickBaseAxis, alignToAxis } from "@/lib/chart-data"
 import { formatBytes, formatUptime, formatNumber, formatRate } from "@/lib/utils"
-import type { Overview, Queue, NodeStats, RateDetails } from "@/lib/rabbitmq/types"
-
-// ── Historical sample helpers ──────────────────────────────────
-
-/** Cumulative counter samples → per-second rates. */
-function ratesFromSamples(details?: RateDetails): { ts: number[]; vals: number[] } {
-  const samples = details?.samples
-  if (!samples || samples.length < 2) return { ts: [], vals: [] }
-  const sorted = [...samples].sort((a, b) => a.timestamp - b.timestamp)
-  const ts: number[] = []
-  const vals: number[] = []
-  for (let i = 1; i < sorted.length; i++) {
-    const dt = (sorted[i].timestamp - sorted[i - 1].timestamp) / 1000
-    if (dt <= 0) continue
-    ts.push(sorted[i].timestamp / 1000)
-    vals.push(Math.max(0, (sorted[i].sample - sorted[i - 1].sample) / dt))
-  }
-  return { ts, vals }
-}
-
-/** Gauge samples (queue lengths) → values as-is. */
-function gaugeFromSamples(details?: RateDetails): { ts: number[]; vals: number[] } {
-  const samples = details?.samples
-  if (!samples || samples.length === 0) return { ts: [], vals: [] }
-  const sorted = [...samples].sort((a, b) => a.timestamp - b.timestamp)
-  return {
-    ts: sorted.map((s) => s.timestamp / 1000),
-    vals: sorted.map((s) => s.sample),
-  }
-}
-
-/** Align a second series onto a base timestamp axis by index. */
-function align(base: number[], series: { ts: number[]; vals: number[] }): number[] {
-  if (series.ts.length === base.length) return series.vals
-  // Fall back to nearest-index mapping when lengths differ slightly
-  return base.map((t) => {
-    let best = 0
-    let bestDist = Infinity
-    for (let i = 0; i < series.ts.length; i++) {
-      const d = Math.abs(series.ts[i] - t)
-      if (d < bestDist) {
-        bestDist = d
-        best = i
-      }
-    }
-    return series.vals[best] ?? 0
-  })
-}
+import type { Overview, Queue, NodeStats } from "@/lib/rabbitmq/types"
 
 const RATE_SERIES = [
   { label: "Publish", stroke: "hsl(24 95% 53%)", fill: "hsl(24 95% 53% / 0.08)" },
@@ -94,7 +48,9 @@ export default function OverviewPage() {
   // Live mode: accumulate a rolling client-side window
   const live = useLiveSeries(isLive ? overview : null, lastUpdated)
 
-  // Historical mode: derive series from broker-retained samples
+  // Historical mode: derive series from broker-retained samples.
+  // The x-axis is the richest available series, so one missing series
+  // never blanks the whole chart.
   const historical = useMemo(() => {
     if (isLive || !overview) return null
     const publish = ratesFromSamples(overview.message_stats?.publish_details)
@@ -103,12 +59,18 @@ export default function OverviewPage() {
     const ready = gaugeFromSamples(overview.queue_totals?.messages_ready_details)
     const unacked = gaugeFromSamples(overview.queue_totals?.messages_unacknowledged_details)
 
-    const rateData: ColumnarData = [publish.ts, publish.vals, align(publish.ts, deliver)]
+    const rateBase = pickBaseAxis(publish, deliver)
+    const rateData: ColumnarData = [
+      rateBase,
+      alignToAxis(rateBase, publish),
+      alignToAxis(rateBase, deliver),
+    ]
+    const queuedBase = pickBaseAxis(totals, ready, unacked)
     const queuedData: ColumnarData = [
-      totals.ts,
-      totals.vals,
-      align(totals.ts, ready),
-      align(totals.ts, unacked),
+      queuedBase,
+      alignToAxis(queuedBase, totals),
+      alignToAxis(queuedBase, ready),
+      alignToAxis(queuedBase, unacked),
     ]
     return { rateData, queuedData }
   }, [isLive, overview])
@@ -123,9 +85,20 @@ export default function OverviewPage() {
   const queueDist = useMemo(() => {
     if (!queues) return []
     const sorted = [...queues].sort((a, b) => b.messages - a.messages)
-    const top = sorted.slice(0, 6).map((q) => ({ name: q.name, value: q.messages }))
+    // Qualify names with vhost so same-named queues in different vhosts
+    // stay distinct segments.
+    const label = (q: Queue) => (q.vhost === "/" ? q.name : `${q.vhost}/${q.name}`)
+    const top = sorted.slice(0, 6).map((q) => ({
+      id: `${q.vhost}|${q.name}`,
+      name: label(q),
+      value: q.messages,
+    }))
     if (sorted.length > 6) {
-      top.push({ name: "Others", value: sorted.slice(6).reduce((s, q) => s + q.messages, 0) })
+      top.push({
+        id: "__others__",
+        name: "Others",
+        value: sorted.slice(6).reduce((s, q) => s + q.messages, 0),
+      })
     }
     return top
   }, [queues])

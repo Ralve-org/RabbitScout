@@ -32,7 +32,10 @@ import {
 import {
   DensityToggle,
   EmptyState,
+  Pagination,
   SortButton,
+  StaleDataBanner,
+  usePagination,
   useRowPadding,
   useSort,
 } from "@/components/shared/table-utils"
@@ -53,7 +56,7 @@ export function ExchangeTable() {
   const url = vhost
     ? `/api/rabbitmq/exchanges/${encodeURIComponent(vhost)}`
     : "/api/rabbitmq/exchanges"
-  const { data: exchanges, error, loading, refresh } = usePolling<Exchange[]>(url)
+  const { data: exchanges, error, loading, lastUpdated, refresh } = usePolling<Exchange[]>(url)
 
   const [search, setSearch] = React.useState("")
   const { sortKey, sortDir, toggle, compare } = useSort<SortKey>("name")
@@ -74,6 +77,8 @@ export function ExchangeTable() {
     }
     return [...out].sort((a, b) => compare(a[sortKey] || "", b[sortKey] || ""))
   }, [list, search, sortKey, compare])
+
+  const { page, setPage, pageCount, paged } = usePagination(filtered)
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -114,6 +119,7 @@ export function ExchangeTable() {
 
   return (
     <div className="space-y-3">
+      {error && exchanges && <StaleDataBanner error={error} lastUpdated={lastUpdated} onRetry={refresh} />}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative max-w-xs flex-1">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -164,7 +170,7 @@ export function ExchangeTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((ex) => (
+              paged.map((ex) => (
                 <TableRow key={`${ex.vhost}/${ex.name}`} className="group">
                   <TableCell className={cn("font-medium", rowPad)}>
                     {ex.name || <span className="text-muted-foreground">(default)</span>}
@@ -218,6 +224,8 @@ export function ExchangeTable() {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPage={setPage} />
 
       <BindingViewer
         exchange={bindingsFor}

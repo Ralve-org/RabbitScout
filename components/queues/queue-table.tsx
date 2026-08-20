@@ -27,6 +27,7 @@ import {
   EmptyState,
   Pagination,
   SortButton,
+  StaleDataBanner,
   usePagination,
   useRowPadding,
   useSort,
@@ -58,10 +59,18 @@ export function QueueTable() {
   const url = vhost
     ? `/api/rabbitmq/queues/${encodeURIComponent(vhost)}`
     : "/api/rabbitmq/queues"
-  const { data: queues, error, loading, refresh } = usePolling<Queue[]>(url)
+  const { data: queues, error, loading, lastUpdated, refresh } = usePolling<Queue[]>(url)
 
   const searchParams = useSearchParams()
-  const [search, setSearch] = React.useState(searchParams.get("q") ?? "")
+  const qParam = searchParams.get("q")
+  const [search, setSearch] = React.useState(qParam ?? "")
+  // Keep the filter in sync with ?q= deep links (command palette jumps) —
+  // state adjusted during render per React's derive-from-props pattern
+  const [prevQParam, setPrevQParam] = React.useState(qParam)
+  if (qParam !== prevQParam) {
+    setPrevQParam(qParam)
+    if (qParam !== null) setSearch(qParam)
+  }
   const [stateFilter, setStateFilter] = React.useState<string>("all")
   const { sortKey, sortDir, toggle, compare } = useSort<SortKey>("name")
   const rowPad = useRowPadding()
@@ -99,6 +108,7 @@ export function QueueTable() {
 
   return (
     <div className="space-y-3">
+      {error && queues && <StaleDataBanner error={error} lastUpdated={lastUpdated} onRetry={refresh} />}
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative max-w-xs flex-1">
@@ -225,7 +235,7 @@ export function QueueTable() {
                     </span>
                   </TableCell>
                   <TableCell className={cn("text-right font-mono tnum", rowPad)}>
-                    {q.messages.toLocaleString()}
+                    {(q.messages ?? 0).toLocaleString()}
                     {q.message_stats?.publish_details?.rate ? (
                       <span className="ml-1.5 text-[11px] text-muted-foreground">
                         {formatRate(q.message_stats.publish_details.rate)}
@@ -233,13 +243,13 @@ export function QueueTable() {
                     ) : null}
                   </TableCell>
                   <TableCell className={cn("text-right font-mono tnum", rowPad)}>
-                    {q.messages_ready.toLocaleString()}
+                    {(q.messages_ready ?? 0).toLocaleString()}
                   </TableCell>
                   <TableCell className={cn("text-right font-mono tnum", rowPad)}>
-                    {q.messages_unacknowledged.toLocaleString()}
+                    {(q.messages_unacknowledged ?? 0).toLocaleString()}
                   </TableCell>
                   <TableCell className={cn("text-right font-mono tnum", rowPad)}>
-                    {q.consumers}
+                    {q.consumers ?? 0}
                   </TableCell>
                   <TableCell className={rowPad}>
                     <span className="inline-flex items-center gap-1.5 text-[13px]">

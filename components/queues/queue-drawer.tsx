@@ -26,29 +26,15 @@ import { PublishDialog } from "./publish-dialog"
 import { DeleteQueueDialog } from "./delete-queue-dialog"
 import { usePolling } from "@/hooks/use-polling"
 import { useToast } from "@/hooks/use-toast"
+import { ratesFromSamples, pickBaseAxis, alignToAxis } from "@/lib/chart-data"
 import { formatBytes, cn } from "@/lib/utils"
-import type { Queue, RateDetails } from "@/lib/rabbitmq/types"
+import type { Queue } from "@/lib/rabbitmq/types"
 
 interface QueueDrawerProps {
   queue: Queue | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onChanged?: () => void
-}
-
-function sparkline(details?: RateDetails): { ts: number[]; vals: number[] } {
-  const samples = details?.samples
-  if (!samples || samples.length < 2) return { ts: [], vals: [] }
-  const sorted = [...samples].sort((a, b) => a.timestamp - b.timestamp)
-  const ts: number[] = []
-  const vals: number[] = []
-  for (let i = 1; i < sorted.length; i++) {
-    const dt = (sorted[i].timestamp - sorted[i - 1].timestamp) / 1000
-    if (dt <= 0) continue
-    ts.push(sorted[i].timestamp / 1000)
-    vals.push(Math.max(0, (sorted[i].sample - sorted[i - 1].sample) / dt))
-  }
-  return { ts, vals }
 }
 
 const SPARK_SERIES = [
@@ -69,16 +55,21 @@ export function QueueDrawer({ queue, open, onOpenChange, onChanged }: QueueDrawe
     open && queue
       ? `/api/rabbitmq/queues/${encodeURIComponent(queue.vhost)}/${encodeURIComponent(queue.name)}?lengths_age=600&lengths_incr=5&msg_rates_age=600&msg_rates_incr=5`
       : null
-  const { data: detail, refresh } = usePolling<Queue>(detailUrl)
+  const { data: rawDetail, refresh } = usePolling<Queue>(detailUrl)
 
+  // Trust the detail payload only when it matches the selected queue —
+  // never render (or worse, purge/delete) under a stale identity.
+  const detail =
+    rawDetail && queue && rawDetail.name === queue.name && rawDetail.vhost === queue.vhost
+      ? rawDetail
+      : null
   const q = detail ?? queue
 
   const chartData: ColumnarData = React.useMemo(() => {
-    const pub = sparkline(detail?.message_stats?.publish_details)
-    const del = sparkline(detail?.message_stats?.deliver_get_details)
-    const deliverAligned =
-      del.ts.length === pub.ts.length ? del.vals : pub.ts.map((_, i) => del.vals[i] ?? 0)
-    return [pub.ts, pub.vals, deliverAligned]
+    const pub = ratesFromSamples(detail?.message_stats?.publish_details)
+    const del = ratesFromSamples(detail?.message_stats?.deliver_get_details)
+    const base = pickBaseAxis(pub, del)
+    return [base, alignToAxis(base, pub), alignToAxis(base, del)]
   }, [detail])
 
   const handlePurge = async () => {
@@ -148,9 +139,9 @@ export function QueueDrawer({ queue, open, onOpenChange, onChanged }: QueueDrawe
             {/* Counts */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "Ready", value: q.messages_ready },
-                { label: "Unacked", value: q.messages_unacknowledged },
-                { label: "Total", value: q.messages },
+                { label: "Ready", value: q.messages_ready ?? 0 },
+                { label: "Unacked", value: q.messages_unacknowledged ?? 0 },
+                { label: "Total", value: q.messages ?? 0 },
               ].map((s) => (
                 <div key={s.label} className="rounded-lg border bg-card px-3 py-2.5">
                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70">
@@ -303,8 +294,8 @@ export function QueueDrawer({ queue, open, onOpenChange, onChanged }: QueueDrawe
         onOpenChange={setViewerOpen}
         queueName={q.name}
         vhost={q.vhost}
-        readyCount={q.messages_ready}
-        unackedCount={q.messages_unacknowledged}
+        readyCount={q.messages_ready ?? 0}
+        unackedCount={q.messages_unacknowledged ?? 0}
       />
 
       <PublishDialog
