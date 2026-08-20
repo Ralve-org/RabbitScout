@@ -1,218 +1,218 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
-import { MessageSquare, Layers, Cable, Server } from "lucide-react"
+import { useMemo, useState } from "react"
+import { MessageSquare, Layers, Cable, Server, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
 import { StatCard } from "@/components/dashboard/stat-card"
-import { MessageRateChart } from "@/components/dashboard/message-rate-chart"
-import { QueueDistributionChart } from "@/components/dashboard/queue-distribution-chart"
-import { QueuedMessagesChart } from "@/components/dashboard/queued-messages-chart"
+import { StreamingChart, type ColumnarData } from "@/components/dashboard/streaming-chart"
+import { DistributionDonut } from "@/components/dashboard/distribution-donut"
+import { TimeRangeSelect, TIME_RANGES, type TimeRangeKey } from "@/components/dashboard/time-range"
 import { ErrorCard } from "@/components/shared/error-card"
 import { AnimatedValue } from "@/components/shared/animated-value"
+import { usePolling } from "@/hooks/use-polling"
+import { useLiveSeries } from "@/hooks/use-live-series"
 import { formatBytes, formatUptime, formatNumber, formatRate } from "@/lib/utils"
-import { motion } from "motion/react"
-import type { Overview, Queue, NodeStats } from "@/lib/rabbitmq/types"
+import type { Overview, Queue, NodeStats, RateDetails } from "@/lib/rabbitmq/types"
 
-const POLL_MS = 2000
-const WINDOW_SEC = 90 // 90-second chart window
+// ── Historical sample helpers ──────────────────────────────────
 
-const stagger = {
-  hidden: { opacity: 0, y: 8 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.06, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const },
-  }),
+/** Cumulative counter samples → per-second rates. */
+function ratesFromSamples(details?: RateDetails): { ts: number[]; vals: number[] } {
+  const samples = details?.samples
+  if (!samples || samples.length < 2) return { ts: [], vals: [] }
+  const sorted = [...samples].sort((a, b) => a.timestamp - b.timestamp)
+  const ts: number[] = []
+  const vals: number[] = []
+  for (let i = 1; i < sorted.length; i++) {
+    const dt = (sorted[i].timestamp - sorted[i - 1].timestamp) / 1000
+    if (dt <= 0) continue
+    ts.push(sorted[i].timestamp / 1000)
+    vals.push(Math.max(0, (sorted[i].sample - sorted[i - 1].sample) / dt))
+  }
+  return { ts, vals }
 }
 
-// ── Columnar data store (mutable for performance) ──────────────
-interface ChartData {
-  timestamps: number[]
-  publishRates: number[]
-  deliveryRates: number[]
-  totalMessages: number[]
-  readyMessages: number[]
-  unackedMessages: number[]
-}
-
-function createEmptyData(): ChartData {
+/** Gauge samples (queue lengths) → values as-is. */
+function gaugeFromSamples(details?: RateDetails): { ts: number[]; vals: number[] } {
+  const samples = details?.samples
+  if (!samples || samples.length === 0) return { ts: [], vals: [] }
+  const sorted = [...samples].sort((a, b) => a.timestamp - b.timestamp)
   return {
-    timestamps: [],
-    publishRates: [],
-    deliveryRates: [],
-    totalMessages: [],
-    readyMessages: [],
-    unackedMessages: [],
+    ts: sorted.map((s) => s.timestamp / 1000),
+    vals: sorted.map((s) => s.sample),
   }
 }
 
-function appendAndTrim(data: ChartData, ov: Overview): ChartData {
-  const now = Date.now() / 1000 // uPlot uses seconds
-  const cutoff = now - WINDOW_SEC - 5
-
-  // Find trim index
-  let trimIdx = 0
-  while (trimIdx < data.timestamps.length && data.timestamps[trimIdx] < cutoff) trimIdx++
-
-  const ts = trimIdx > 0 ? data.timestamps.slice(trimIdx) : [...data.timestamps]
-  const pr = trimIdx > 0 ? data.publishRates.slice(trimIdx) : [...data.publishRates]
-  const dr = trimIdx > 0 ? data.deliveryRates.slice(trimIdx) : [...data.deliveryRates]
-  const tm = trimIdx > 0 ? data.totalMessages.slice(trimIdx) : [...data.totalMessages]
-  const rm = trimIdx > 0 ? data.readyMessages.slice(trimIdx) : [...data.readyMessages]
-  const um = trimIdx > 0 ? data.unackedMessages.slice(trimIdx) : [...data.unackedMessages]
-
-  ts.push(now)
-  pr.push(ov.message_stats?.publish_details?.rate ?? 0)
-  dr.push(ov.message_stats?.deliver_get_details?.rate ?? 0)
-  tm.push(ov.queue_totals?.messages ?? 0)
-  rm.push(ov.queue_totals?.messages_ready ?? 0)
-  um.push(ov.queue_totals?.messages_unacknowledged ?? 0)
-
-  return {
-    timestamps: ts,
-    publishRates: pr,
-    deliveryRates: dr,
-    totalMessages: tm,
-    readyMessages: rm,
-    unackedMessages: um,
-  }
+/** Align a second series onto a base timestamp axis by index. */
+function align(base: number[], series: { ts: number[]; vals: number[] }): number[] {
+  if (series.ts.length === base.length) return series.vals
+  // Fall back to nearest-index mapping when lengths differ slightly
+  return base.map((t) => {
+    let best = 0
+    let bestDist = Infinity
+    for (let i = 0; i < series.ts.length; i++) {
+      const d = Math.abs(series.ts[i] - t)
+      if (d < bestDist) {
+        bestDist = d
+        best = i
+      }
+    }
+    return series.vals[best] ?? 0
+  })
 }
+
+const RATE_SERIES = [
+  { label: "Publish", stroke: "hsl(24 95% 53%)", fill: "hsl(24 95% 53% / 0.08)" },
+  { label: "Deliver", stroke: "hsl(142 66% 46%)", fill: "hsl(142 66% 46% / 0.06)" },
+]
+
+const QUEUED_SERIES = [
+  { label: "Total", stroke: "hsl(0 72% 55%)", fill: "hsl(0 72% 55% / 0.06)" },
+  { label: "Ready", stroke: "hsl(38 92% 52%)", fill: "hsl(38 92% 52% / 0.05)" },
+  { label: "Unacked", stroke: "hsl(217 91% 62%)", fill: "hsl(217 91% 62% / 0.05)" },
+]
 
 // ── Main page ──────────────────────────────────────────────────
+
 export default function OverviewPage() {
-  const [overview, setOverview] = useState<Overview | null>(null)
-  const [nodeStats, setNodeStats] = useState<NodeStats | null>(null)
-  const [queueDist, setQueueDist] = useState<{ name: string; value: number }[]>([])
-  const [chartData, setChartData] = useState<ChartData>(createEmptyData)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const mountedRef = useRef(true)
+  const [range, setRange] = useState<TimeRangeKey>("live")
+  const rangeDef = TIME_RANGES.find((r) => r.key === range)!
+  const isLive = range === "live"
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [overviewRes, queuesRes] = await Promise.all([
-        fetch("/api/rabbitmq/overview"),
-        fetch("/api/rabbitmq/queues"),
-      ])
-      if (!mountedRef.current) return
-      if (!overviewRes.ok) throw new Error("Failed to fetch overview")
-      if (!queuesRes.ok) throw new Error("Failed to fetch queues")
+  const overviewUrl = isLive
+    ? "/api/rabbitmq/overview"
+    : `/api/rabbitmq/overview?lengths_age=${rangeDef.age}&lengths_incr=${rangeDef.incr}&msg_rates_age=${rangeDef.age}&msg_rates_incr=${rangeDef.incr}`
 
-      const ov: Overview = await overviewRes.json()
-      const queues: Queue[] = await queuesRes.json()
+  const { data: overview, error, loading, lastUpdated } = usePolling<Overview>(overviewUrl)
+  const { data: queues } = usePolling<Queue[]>("/api/rabbitmq/queues")
+  const { data: nodeStats } = usePolling<NodeStats | null>(
+    overview?.node ? `/api/rabbitmq/nodes/${encodeURIComponent(overview.node)}` : null,
+  )
 
-      setOverview(ov)
-      setError(null)
-      setChartData((prev) => appendAndTrim(prev, ov))
+  // Live mode: accumulate a rolling client-side window
+  const live = useLiveSeries(isLive ? overview : null, lastUpdated)
 
-      // Node stats (non-blocking)
-      if (ov.node) {
-        fetch(`/api/rabbitmq/nodes/${ov.node}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((s) => { if (mountedRef.current && s) setNodeStats(s) })
-          .catch(() => {})
-      }
+  // Historical mode: derive series from broker-retained samples
+  const historical = useMemo(() => {
+    if (isLive || !overview) return null
+    const publish = ratesFromSamples(overview.message_stats?.publish_details)
+    const deliver = ratesFromSamples(overview.message_stats?.deliver_get_details)
+    const totals = gaugeFromSamples(overview.queue_totals?.messages_details)
+    const ready = gaugeFromSamples(overview.queue_totals?.messages_ready_details)
+    const unacked = gaugeFromSamples(overview.queue_totals?.messages_unacknowledged_details)
 
-      // Queue distribution
-      const sorted = [...queues].sort((a, b) => b.messages - a.messages)
-      const top = sorted.slice(0, 6).map((q) => ({ name: q.name, value: q.messages }))
-      if (sorted.length > 6) {
-        top.push({ name: "Others", value: sorted.slice(6).reduce((s, q) => s + q.messages, 0) })
-      }
-      setQueueDist(top)
-    } catch (err) {
-      if (mountedRef.current) setError(err instanceof Error ? err.message : "Unknown error")
-    } finally {
-      if (mountedRef.current) setLoading(false)
+    const rateData: ColumnarData = [publish.ts, publish.vals, align(publish.ts, deliver)]
+    const queuedData: ColumnarData = [
+      totals.ts,
+      totals.vals,
+      align(totals.ts, ready),
+      align(totals.ts, unacked),
+    ]
+    return { rateData, queuedData }
+  }, [isLive, overview])
+
+  const rateData: ColumnarData = isLive
+    ? [live.timestamps, live.publishRates, live.deliveryRates]
+    : historical?.rateData ?? [[], [], []]
+  const queuedData: ColumnarData = isLive
+    ? [live.timestamps, live.totalMessages, live.readyMessages, live.unackedMessages]
+    : historical?.queuedData ?? [[], [], [], []]
+
+  const queueDist = useMemo(() => {
+    if (!queues) return []
+    const sorted = [...queues].sort((a, b) => b.messages - a.messages)
+    const top = sorted.slice(0, 6).map((q) => ({ name: q.name, value: q.messages }))
+    if (sorted.length > 6) {
+      top.push({ name: "Others", value: sorted.slice(6).reduce((s, q) => s + q.messages, 0) })
     }
-  }, [])
-
-  useEffect(() => {
-    mountedRef.current = true
-    fetchData()
-    const id = setInterval(fetchData, POLL_MS)
-    return () => { mountedRef.current = false; clearInterval(id) }
-  }, [fetchData])
+    return top
+  }, [queues])
 
   if (error && !overview) {
-    return <ErrorCard message={error} type="CONNECTION" onRetry={fetchData} />
+    return <ErrorCard message={error} type="CONNECTION" />
   }
-  if (loading) return <OverviewSkeleton />
+  if (loading && !overview) return <OverviewSkeleton />
 
   const ov = overview!
   const publishRate = ov.message_stats?.publish_details?.rate ?? 0
   const deliveryRate = ov.message_stats?.deliver_get_details?.rate ?? 0
+  const hasAlarm = nodeStats?.mem_alarm || nodeStats?.disk_free_alarm
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* ── Stat cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            title: "Total Messages",
-            value: ov.queue_totals?.messages ?? 0,
-            subtitle: `${formatNumber(ov.queue_totals?.messages_ready ?? 0)} ready \u00b7 ${formatNumber(ov.queue_totals?.messages_unacknowledged ?? 0)} unacked`,
-            icon: MessageSquare,
-          },
-          {
-            title: "Queues",
-            value: ov.object_totals?.queues ?? 0,
-            subtitle: `${formatNumber(ov.object_totals?.exchanges ?? 0)} exchanges`,
-            icon: Layers,
-          },
-          {
-            title: "Connections",
-            value: ov.object_totals?.connections ?? 0,
-            subtitle: `${formatNumber(ov.object_totals?.channels ?? 0)} channels`,
-            icon: Cable,
-          },
-          {
-            title: "Memory",
-            value: nodeStats?.mem_used ?? 0,
-            format: (n: number) => formatBytes(n),
-            subtitle: nodeStats?.uptime ? `Up ${formatUptime(nodeStats.uptime)}` : undefined,
-            icon: Server,
-          },
-        ].map((s, i) => (
-          <motion.div key={s.title} variants={stagger} initial="hidden" animate="show" custom={i}>
-            <StatCard {...s} />
-          </motion.div>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          title="Total Messages"
+          value={ov.queue_totals?.messages ?? 0}
+          subtitle={`${formatNumber(ov.queue_totals?.messages_ready ?? 0)} ready · ${formatNumber(ov.queue_totals?.messages_unacknowledged ?? 0)} unacked`}
+          icon={MessageSquare}
+        />
+        <StatCard
+          title="Queues"
+          value={ov.object_totals?.queues ?? 0}
+          subtitle={`${formatNumber(ov.object_totals?.exchanges ?? 0)} exchanges`}
+          icon={Layers}
+        />
+        <StatCard
+          title="Connections"
+          value={ov.object_totals?.connections ?? 0}
+          subtitle={`${formatNumber(ov.object_totals?.channels ?? 0)} channels · ${formatNumber(ov.object_totals?.consumers ?? 0)} consumers`}
+          icon={Cable}
+        />
+        <StatCard
+          title="Memory"
+          value={nodeStats?.mem_used ?? 0}
+          format={(n) => formatBytes(n)}
+          subtitle={nodeStats?.uptime ? `Up ${formatUptime(nodeStats.uptime)}` : undefined}
+          icon={Server}
+        />
+      </div>
+
+      {/* ── Range control ── */}
+      <div className="flex items-center justify-between">
+        <TimeRangeSelect value={range} onChange={setRange} />
+        {hasAlarm && (
+          <Badge variant="destructive" className="gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            {nodeStats?.mem_alarm ? "Memory alarm" : "Disk alarm"}
+          </Badge>
+        )}
       </div>
 
       {/* ── Charts + Cluster info row ── */}
-      <motion.div className="grid gap-4 lg:grid-cols-12" variants={stagger} initial="hidden" animate="show" custom={4}>
-        {/* Message Rates — flex col so chart fills available height */}
-        <Card className="lg:col-span-8 flex flex-col">
-          <CardHeader className="pb-2 shrink-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Message Rates</CardTitle>
+      <div className="grid gap-4 lg:grid-cols-12">
+        <Card className="flex flex-col lg:col-span-8">
+          <CardHeader className="shrink-0 pb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Message Rates
+              </CardTitle>
               <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-primary" />
-                  Publish <span className="font-mono">{formatRate(publishRate)}</span>
+                  Publish <span className="font-mono tnum">{formatRate(publishRate)}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-success" />
-                  Deliver <span className="font-mono">{formatRate(deliveryRate)}</span>
+                  Deliver <span className="font-mono tnum">{formatRate(deliveryRate)}</span>
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                {isLive && (
+                  <span className="flex items-center gap-1">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                    </span>
+                    Live
                   </span>
-                  Live
-                </span>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 pb-4">
-            <MessageRateChart
-              timestamps={chartData.timestamps}
-              publishRates={chartData.publishRates}
-              deliveryRates={chartData.deliveryRates}
-            />
+            <StreamingChart data={rateData} series={RATE_SERIES} yAxisFormat={(v) => `${Math.round(v)}/s`} />
           </CardContent>
         </Card>
 
@@ -225,11 +225,6 @@ export default function OverviewPage() {
             <InfoRow label="Node" value={ov.node || "—"} mono />
             <InfoRow label="RabbitMQ" value={ov.management_version || "—"} />
             <InfoRow label="Rates mode" value={ov.rates_mode || "—"} />
-            <InfoRow
-              label="Consumers"
-              value={formatNumber(ov.object_totals?.consumers ?? 0)}
-              mono
-            />
             {nodeStats && (
               <>
                 <InfoRow label="Disk free" value={formatBytes(nodeStats.disk_free ?? 0)} mono />
@@ -243,14 +238,21 @@ export default function OverviewPage() {
                   value={`${formatNumber(nodeStats.sockets_used ?? 0)} / ${formatNumber(nodeStats.sockets_total ?? 0)}`}
                   mono
                 />
+                <InfoRow
+                  label="Erlang processes"
+                  value={`${formatNumber(nodeStats.proc_used ?? 0)} / ${formatNumber(nodeStats.proc_total ?? 0)}`}
+                  mono
+                />
               </>
             )}
             {ov.listeners && ov.listeners.length > 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-1">Listeners</p>
+                <p className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground/60">
+                  Listeners
+                </p>
                 <div className="space-y-0.5">
                   {ov.listeners.slice(0, 4).map((l, i) => (
-                    <p key={i} className="text-xs font-mono text-muted-foreground">
+                    <p key={i} className="font-mono text-xs text-muted-foreground">
                       {l.protocol} :{l.port}
                     </p>
                   ))}
@@ -259,53 +261,49 @@ export default function OverviewPage() {
             )}
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* ── Bottom row ── */}
-      <motion.div className="grid gap-4 lg:grid-cols-12" variants={stagger} initial="hidden" animate="show" custom={5}>
-        {/* Queued Messages — flex col so chart fills available height */}
-        <Card className="lg:col-span-8 flex flex-col">
-          <CardHeader className="pb-2 shrink-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Queued Messages</CardTitle>
+      <div className="grid gap-4 lg:grid-cols-12">
+        <Card className="flex flex-col lg:col-span-8">
+          <CardHeader className="shrink-0 pb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Queued Messages
+              </CardTitle>
               <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-destructive" />
-                  Total <AnimatedValue value={ov.queue_totals?.messages ?? 0} className="font-mono" />
+                  Total <AnimatedValue value={ov.queue_totals?.messages ?? 0} className="font-mono tnum" />
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-warning" />
-                  Ready <AnimatedValue value={ov.queue_totals?.messages_ready ?? 0} className="font-mono" />
+                  Ready <AnimatedValue value={ov.queue_totals?.messages_ready ?? 0} className="font-mono tnum" />
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(217,91%,60%)]" />
-                  Unacked <AnimatedValue value={ov.queue_totals?.messages_unacknowledged ?? 0} className="font-mono" />
+                  <span className="h-2 w-2 rounded-full bg-info" />
+                  Unacked <AnimatedValue value={ov.queue_totals?.messages_unacknowledged ?? 0} className="font-mono tnum" />
                 </span>
               </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 pb-4">
-            <QueuedMessagesChart
-              timestamps={chartData.timestamps}
-              totalMessages={chartData.totalMessages}
-              readyMessages={chartData.readyMessages}
-              unackedMessages={chartData.unackedMessages}
-            />
+            <StreamingChart data={queuedData} series={QUEUED_SERIES} yAxisFormat={(v) => v.toLocaleString()} />
           </CardContent>
         </Card>
 
         {/* Queue Distribution */}
-        <Card className="lg:col-span-4 flex flex-col">
-          <CardHeader className="pb-2 shrink-0">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Queue Distribution</CardTitle>
+        <Card className="flex flex-col lg:col-span-4">
+          <CardHeader className="shrink-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Queue Distribution
+            </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 min-h-[200px]">
-            <div className="h-full">
-              <QueueDistributionChart data={queueDist} />
-            </div>
+          <CardContent className="min-h-[220px] flex-1">
+            <DistributionDonut data={queueDist} />
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   )
 }
@@ -316,39 +314,48 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
   return (
     <div className="flex items-center justify-between text-xs">
       <span className="text-muted-foreground/70">{label}</span>
-      <span className={mono ? "font-mono text-foreground" : "text-foreground"}>{value}</span>
+      <span className={mono ? "font-mono text-foreground tnum" : "text-foreground"}>{value}</span>
     </div>
   )
 }
 
 function OverviewSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="skeleton-stagger">
+          <Card key={i}>
             <CardContent className="p-5">
-              <Skeleton className="h-3 w-20 mb-3" />
-              <Skeleton className="h-7 w-24 mb-2" />
+              <Skeleton className="mb-3 h-3 w-20" />
+              <Skeleton className="mb-2 h-7 w-24" />
               <Skeleton className="h-3 w-32" />
             </CardContent>
           </Card>
         ))}
       </div>
+      <Skeleton className="h-7 w-56" />
       <div className="grid gap-4 lg:grid-cols-12">
-        <Card className="lg:col-span-8 skeleton-stagger" style={{ animationDelay: "400ms" }}>
-          <CardContent className="p-5"><Skeleton className="h-[200px] w-full" /></CardContent>
+        <Card className="lg:col-span-8">
+          <CardContent className="p-5">
+            <Skeleton className="h-[200px] w-full" />
+          </CardContent>
         </Card>
-        <Card className="lg:col-span-4 skeleton-stagger" style={{ animationDelay: "500ms" }}>
-          <CardContent className="p-5"><Skeleton className="h-[200px] w-full" /></CardContent>
+        <Card className="lg:col-span-4">
+          <CardContent className="p-5">
+            <Skeleton className="h-[200px] w-full" />
+          </CardContent>
         </Card>
       </div>
       <div className="grid gap-4 lg:grid-cols-12">
-        <Card className="lg:col-span-8 skeleton-stagger" style={{ animationDelay: "600ms" }}>
-          <CardContent className="p-5"><Skeleton className="h-[200px] w-full" /></CardContent>
+        <Card className="lg:col-span-8">
+          <CardContent className="p-5">
+            <Skeleton className="h-[200px] w-full" />
+          </CardContent>
         </Card>
-        <Card className="lg:col-span-4 skeleton-stagger" style={{ animationDelay: "700ms" }}>
-          <CardContent className="p-5"><Skeleton className="h-[200px] w-full" /></CardContent>
+        <Card className="lg:col-span-4">
+          <CardContent className="p-5">
+            <Skeleton className="h-[200px] w-full" />
+          </CardContent>
         </Card>
       </div>
     </div>

@@ -37,7 +37,9 @@ export async function POST(request: NextRequest) {
     }
 
     const encodedVhost = encodeURIComponent(vhost || '/')
-    const encodedExchange = encodeURIComponent(exchange ?? '')
+    // The default (nameless) exchange is addressed as "amq.default" in
+    // management API URLs — an empty path segment is not routable.
+    const encodedExchange = exchange ? encodeURIComponent(exchange) : 'amq.default'
     const url = `${getRabbitMQBaseUrl()}/api/exchanges/${encodedVhost}/${encodedExchange}/publish`
 
     const response = await fetch(url, {

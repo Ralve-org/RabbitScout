@@ -7,3 +7,15 @@ services:
       - RABBITMQ_HOST=${RABBITMQ_HOST:-localhost}
       - RABBITMQ_PORT=${RABBITMQ_PORT:-15672}
       - RABBITMQ_PROTOCOL=${RABBITMQ_PROTOCOL:-http}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/api/health',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s

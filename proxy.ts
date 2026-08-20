@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout']
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/health']
 
-export function middleware(request: NextRequest) {
-  // Block middleware-subrequest header (Next.js auth bypass CVE mitigation)
-  if (request.headers.has('x-middleware-subrequest')) {
-    return new NextResponse('Forbidden', { status: 403 })
-  }
-
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
   const hasSession = request.cookies.has('rmq-session')
 
-  // Allow public paths always
   if (isPublic) {
     // Redirect authenticated users away from login
     if (pathname === '/login' && hasSession) {
@@ -22,9 +16,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Protect everything else
   if (!hasSession) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    // API calls get a proper 401 instead of a redirect-to-HTML,
+    // so client fetches can detect session expiry cleanly.
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    const loginUrl = new URL('/login', request.url)
+    if (pathname !== '/') loginUrl.searchParams.set('next', pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   return NextResponse.next()

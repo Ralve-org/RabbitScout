@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/lib/auth/store"
 import { motion } from "motion/react"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { setAuth } = useAuth()
   const [loading, setLoading] = useState(false)
   const [showPw, setShowPw] = useState(false)
@@ -48,7 +49,9 @@ export default function LoginPage() {
 
       if (data.authenticated && data.user) {
         setAuth(data.user)
-        router.push("/")
+        // Return to the page the user originally asked for
+        const next = searchParams.get("next")
+        router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/")
         router.refresh()
       } else {
         setError("Invalid response from server")
@@ -61,10 +64,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
       {/* Ambient background */}
       <div className="pointer-events-none absolute inset-0 bg-background" />
-      <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-primary/[0.04] blur-[120px]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/4 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/[0.04] blur-[120px]" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-[300px] w-[400px] rounded-full bg-primary/[0.03] blur-[80px]" />
 
       <motion.div
@@ -80,15 +83,9 @@ export default function LoginPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.15, duration: 0.4 }}
         >
-          <div className="flex justify-center mb-4">
+          <div className="mb-4 flex justify-center">
             <div className="relative">
-              <Image
-                src="/images/logo.png"
-                alt="RabbitScout"
-                width={48}
-                height={48}
-                priority
-              />
+              <Image src="/images/logo.png" alt="RabbitScout" width={48} height={48} priority />
               <div className="absolute inset-0 -z-10 scale-150 rounded-full bg-primary/10 blur-xl" />
             </div>
           </div>
@@ -100,7 +97,6 @@ export default function LoginPage() {
           </p>
         </motion.div>
 
-        {/* Form — no card wrapper, clean and modern */}
         <motion.form
           onSubmit={handleSubmit}
           className="space-y-5"
@@ -119,7 +115,7 @@ export default function LoginPage() {
               autoComplete="username"
               autoFocus
               disabled={loading}
-              className="h-10 bg-secondary/50 border-transparent focus:border-border focus:bg-background transition-all"
+              className="h-10 border-transparent bg-secondary/50 transition-all focus:border-border focus:bg-background"
             />
           </div>
 
@@ -135,12 +131,12 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 autoComplete="current-password"
                 disabled={loading}
-                className="h-10 pr-10 bg-secondary/50 border-transparent focus:border-border focus:bg-background transition-all"
+                className="h-10 border-transparent bg-secondary/50 pr-10 transition-all focus:border-border focus:bg-background"
               />
               <button
                 type="button"
                 onClick={() => setShowPw(!showPw)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 transition-colors hover:text-foreground"
                 tabIndex={-1}
               >
                 {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -158,15 +154,11 @@ export default function LoginPage() {
             </motion.div>
           )}
 
-          <Button
-            type="submit"
-            className="w-full h-10 font-medium"
-            disabled={loading}
-          >
+          <Button type="submit" className="h-10 w-full font-medium" disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
+                Connecting…
               </>
             ) : (
               "Sign In"
@@ -184,5 +176,13 @@ export default function LoginPage() {
         </motion.p>
       </motion.div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

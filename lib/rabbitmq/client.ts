@@ -1,20 +1,14 @@
-import { cookies } from 'next/headers'
 import { getRabbitMQBaseUrl, RABBITMQ_API_TIMEOUT_MS } from './config'
 import { RabbitMQError } from './errors'
+import { getSessionFromCookie } from '@/lib/auth/session'
 import type { AuthSession } from './types'
 
 /**
- * Read the current user's RabbitMQ credentials from the httpOnly session cookie.
- * Only works in Server Components and API routes (server-side).
+ * Read the current user's RabbitMQ credentials from the httpOnly session
+ * cookie. Only works in Server Components and API routes (server-side).
  */
-export function getSession(): AuthSession | null {
-  try {
-    const cookie = cookies().get('rmq-session')
-    if (!cookie?.value) return null
-    return JSON.parse(cookie.value) as AuthSession
-  } catch {
-    return null
-  }
+export async function getSession(): Promise<AuthSession | null> {
+  return getSessionFromCookie()
 }
 
 /**
@@ -25,7 +19,7 @@ export async function rabbitmqFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const session = getSession()
+  const session = await getSession()
   if (!session) {
     throw new RabbitMQError(401, 'Not authenticated', 'AUTH')
   }
@@ -65,12 +59,13 @@ export async function rabbitmqFetch<T = unknown>(
 
 /**
  * Validate credentials against the RabbitMQ Management API.
- * Used during login — does NOT read cookies.
+ * Used during login — does NOT read cookies. `tags` may be a string
+ * (RabbitMQ ≤ 3.8) or an array (3.9+); callers must normalize.
  */
 export async function validateCredentials(
   username: string,
   password: string,
-): Promise<{ name: string; tags: string }> {
+): Promise<{ name: string; tags: string | string[] }> {
   const credentials = Buffer.from(`${username}:${password}`).toString('base64')
   const url = `${getRabbitMQBaseUrl()}/api/whoami`
 

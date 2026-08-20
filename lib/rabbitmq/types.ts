@@ -43,6 +43,9 @@ export interface Overview {
     messages: number
     messages_ready: number
     messages_unacknowledged: number
+    messages_details?: RateDetails
+    messages_ready_details?: RateDetails
+    messages_unacknowledged_details?: RateDetails
   }
   object_totals: {
     connections: number
@@ -65,6 +68,7 @@ export interface Queue {
   name: string
   vhost: string
   state: string
+  type?: 'classic' | 'quorum' | 'stream' | string
   durable: boolean
   auto_delete: boolean
   exclusive: boolean
@@ -74,7 +78,39 @@ export interface Queue {
   messages: number
   messages_ready: number
   messages_unacknowledged: number
+  messages_details?: RateDetails
+  messages_ready_details?: RateDetails
+  messages_unacknowledged_details?: RateDetails
+  memory?: number
+  arguments?: Record<string, unknown>
   message_stats?: MessageStats
+  consumer_details?: ConsumerDetail[]
+}
+
+export interface ConsumerDetail {
+  consumer_tag: string
+  ack_required: boolean
+  prefetch_count: number
+  active?: boolean
+  channel_details: {
+    name: string
+    connection_name: string
+    peer_host: string
+    peer_port: number
+    user: string
+    number: number
+  }
+}
+
+/** Paginated list shape returned when the `page` query param is used. */
+export interface PaginatedResponse<T> {
+  items: T[]
+  filtered_count: number
+  item_count: number
+  page: number
+  page_count: number
+  page_size: number
+  total_count: number
 }
 
 // ── Exchanges ────────────────────────────────────────────────────────
@@ -106,6 +142,8 @@ export interface Binding {
 
 export interface Connection {
   name: string
+  /** Client-supplied display name (AMQP 0-9-1), when provided. */
+  user_provided_name?: string
   user: string
   vhost: string
   host: string
@@ -174,8 +212,10 @@ export interface NodeStats {
   name: string
   mem_used: number
   mem_limit: number
+  mem_alarm?: boolean
   disk_free: number
   disk_free_limit: number
+  disk_free_alarm?: boolean
   fd_used: number
   fd_total: number
   sockets_used: number
@@ -184,6 +224,16 @@ export interface NodeStats {
   proc_total: number
   uptime: number
   run_queue: number
+  processors?: number
+}
+
+// ── VHosts ───────────────────────────────────────────────────────────
+
+export interface VHost {
+  name: string
+  description?: string
+  tags?: string[]
+  tracing?: boolean
 }
 
 // ── Messages (from queue get) ────────────────────────────────────────

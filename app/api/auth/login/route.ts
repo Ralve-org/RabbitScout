@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { validateCredentials } from '@/lib/rabbitmq/client'
-import { setSessionCookie } from '@/lib/auth/session'
+import { COOKIE_NAME, createSession, normalizeTags, sessionCookieOptions } from '@/lib/auth/session'
 import { classifyError } from '@/lib/rabbitmq/errors'
 import type { RabbitMQUser } from '@/lib/rabbitmq/types'
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     const whoami = await validateCredentials(username, password)
-    const tags = typeof whoami.tags === 'string' ? whoami.tags.split(',').map((t) => t.trim()) : []
+    const tags = normalizeTags(whoami.tags)
 
     const user: RabbitMQUser = {
       username: whoami.name,
@@ -25,9 +25,17 @@ export async function POST(request: Request) {
     }
 
     const credentials = Buffer.from(`${username}:${password}`).toString('base64')
-    setSessionCookie(credentials, user)
 
-    return NextResponse.json({ authenticated: true, user })
+    // Attach the cookie to the response directly. The Secure attribute is
+    // derived from the actual request protocol (see isSecureRequest), so
+    // plain-HTTP deployments keep working sessions.
+    const response = NextResponse.json({ authenticated: true, user })
+    response.cookies.set(
+      COOKIE_NAME,
+      JSON.stringify(createSession(credentials, user)),
+      sessionCookieOptions(request),
+    )
+    return response
   } catch (err) {
     const error = classifyError(err)
     return NextResponse.json({ error: error.message }, { status: error.status })

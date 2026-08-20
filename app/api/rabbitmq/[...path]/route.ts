@@ -4,6 +4,8 @@ import type { AuthSession } from '@/lib/rabbitmq/types'
 
 export const dynamic = 'force-dynamic'
 
+type RouteContext = { params: Promise<{ path: string[] }> }
+
 function getCredentials(request: NextRequest): string | null {
   try {
     const cookie = request.cookies.get('rmq-session')
@@ -17,7 +19,7 @@ function getCredentials(request: NextRequest): string | null {
 
 async function proxyToRabbitMQ(
   request: NextRequest,
-  params: { path: string[] },
+  context: RouteContext,
   method: string,
 ) {
   const credentials = getCredentials(request)
@@ -27,8 +29,10 @@ async function proxyToRabbitMQ(
 
   // Re-encode each segment: Next.js decodes %2F → / in params,
   // but RabbitMQ requires vhost "/" to stay encoded as %2F in the URL.
-  const path = params.path.map((s) => encodeURIComponent(s)).join('/')
-  const url = `${getRabbitMQBaseUrl()}/api/${path}`
+  const { path: segments } = await context.params
+  const path = segments.map((s) => encodeURIComponent(s)).join('/')
+  const search = request.nextUrl.search
+  const url = `${getRabbitMQBaseUrl()}/api/${path}${search}`
 
   const fetchOptions: RequestInit = {
     method,
@@ -79,18 +83,18 @@ async function proxyToRabbitMQ(
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxyToRabbitMQ(req, params, 'GET')
+export async function GET(req: NextRequest, ctx: RouteContext) {
+  return proxyToRabbitMQ(req, ctx, 'GET')
 }
 
-export async function POST(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxyToRabbitMQ(req, params, 'POST')
+export async function POST(req: NextRequest, ctx: RouteContext) {
+  return proxyToRabbitMQ(req, ctx, 'POST')
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxyToRabbitMQ(req, params, 'PUT')
+export async function PUT(req: NextRequest, ctx: RouteContext) {
+  return proxyToRabbitMQ(req, ctx, 'PUT')
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { path: string[] } }) {
-  return proxyToRabbitMQ(req, params, 'DELETE')
+export async function DELETE(req: NextRequest, ctx: RouteContext) {
+  return proxyToRabbitMQ(req, ctx, 'DELETE')
 }
