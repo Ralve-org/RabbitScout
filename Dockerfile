@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Build stage ──────────────────────────────────────────────
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # ── Production stage ─────────────────────────────────────────
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 
 LABEL org.opencontainers.image.source="https://github.com/Ralve-org/RabbitScout" \
       org.opencontainers.image.description="Modern RabbitMQ management dashboard" \
