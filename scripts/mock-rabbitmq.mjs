@@ -149,6 +149,13 @@ const server = http.createServer((req, res) => {
       return sendJSON(res, 200, all)
     }
 
+    // Per-vhost queue listing: GET /api/queues/{vhost}
+    const qv = path.match(/^\/api\/queues\/([^/]+)$/)
+    if (qv && req.method === 'GET') {
+      const vhost = decodeURIComponent(qv[1])
+      return sendJSON(res, 200, queues(lengthsAge, lengthsIncr).filter((x) => x.vhost === vhost))
+    }
+
     const qm = path.match(/^\/api\/queues\/([^/]+)\/([^/]+)$/)
     if (qm && req.method === 'GET') {
       const name = decodeURIComponent(qm[2])
@@ -184,7 +191,10 @@ const server = http.createServer((req, res) => {
       return sendJSON(res, 200, msgs)
     }
 
-    if (path === '/api/exchanges' || path === '/api/exchanges/') {
+    // Per-vhost exchange listing: GET /api/exchanges/{vhost}
+    const ev = path.match(/^\/api\/exchanges\/([^/]+)$/)
+    if (path === '/api/exchanges' || path === '/api/exchanges/' || (ev && req.method === 'GET')) {
+      const vhostFilter = ev ? decodeURIComponent(ev[1]) : null
       const types = ['direct', 'fanout', 'headers', 'topic']
       const base = ['', 'amq.direct', 'amq.fanout', 'amq.headers', 'amq.match', 'amq.rabbitmq.trace', 'amq.topic'].map((name, i) => ({
         name, vhost: '/', type: types[i % 4], durable: true, auto_delete: false,
@@ -195,7 +205,7 @@ const server = http.createServer((req, res) => {
         { name: 'events', vhost: '/', type: 'fanout', durable: true, auto_delete: false, internal: false, arguments: {}, message_stats: { publish_in: 4e6, publish_in_details: rateDetails(400, ratesAge, ratesIncr), publish_out: 8e6, publish_out_details: rateDetails(800, ratesAge, ratesIncr) } },
         { name: 'dlx', vhost: '/', type: 'direct', durable: true, auto_delete: false, internal: false, arguments: {} },
       )
-      return sendJSON(res, 200, base)
+      return sendJSON(res, 200, vhostFilter ? base.filter((x) => x.vhost === vhostFilter) : base)
     }
 
     if (/^\/api\/exchanges\/[^/]+\/[^/]+\/bindings\/source$/.test(path)) {
