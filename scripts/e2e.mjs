@@ -182,7 +182,7 @@ async function main() {
       body: JSON.stringify({ vhost: '/', exchange: '', routing_key: 'orders.created', payload: '{"x":1}' }),
     })
     const body = await res.json()
-    check('publish via default exchange', res.status === 200 && body?.routed === true)
+    check('publish via default exchange', res.status === 200 && body?.routed === true, `${res.status} ${body?.error ?? ''}`)
   }
   {
     const res = await authed(`/api/rabbitmq/queues/${encodeURIComponent('/')}/e2e.tmp`, {
