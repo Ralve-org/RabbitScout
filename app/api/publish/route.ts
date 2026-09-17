@@ -9,7 +9,8 @@ export const dynamic = 'force-dynamic'
  * Separated from the catch-all proxy to avoid routing conflicts and to
  * correctly handle the default exchange's empty name in the URL path.
  *
- * RabbitMQ API: PUT /api/exchanges/{vhost}/{exchange}/publish
+ * RabbitMQ API: POST /api/exchanges/{vhost}/{exchange}/publish. The HTTP API
+ * reference lists PUT, but the broker answers 405 to anything but POST.
  */
 export async function POST(request: NextRequest) {
   const cookie = request.cookies.get('rmq-session')
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     const url = `${getRabbitMQBaseUrl()}/api/exchanges/${encodedVhost}/${encodedExchange}/publish`
 
     const response = await fetch(url, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         Authorization: `Basic ${credentials}`,
         'Content-Type': 'application/json',

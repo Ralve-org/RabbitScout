@@ -216,7 +216,11 @@ const server = http.createServer((req, res) => {
     }
     if (/^\/api\/exchanges\/[^/]+\/[^/]+$/.test(path) && req.method === 'PUT') return sendJSON(res, 201, {})
     if (/^\/api\/exchanges\/[^/]+\/[^/]+$/.test(path) && req.method === 'DELETE') { res.writeHead(204); return res.end() }
-    if (/^\/api\/exchanges\/[^/]+\/[^/]+\/publish$/.test(path) && req.method === 'PUT') {
+    // Real brokers only accept POST here, despite the HTTP API reference saying PUT.
+    if (/^\/api\/exchanges\/[^/]+\/[^/]+\/publish$/.test(path)) {
+      if (req.method !== 'POST') {
+        res.writeHead(405, { allow: 'POST, OPTIONS' }); return res.end()
+      }
       return sendJSON(res, 200, { routed: true })
     }
     if (/^\/api\/bindings\/[^/]+\/e\/[^/]+\/q\/[^/]+$/.test(path) && req.method === 'POST') {
